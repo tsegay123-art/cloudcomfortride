@@ -1,0 +1,20 @@
+import {
+  COMPANY_INFO,
+  SERVICES_DATA,
+  DRIVER_STANDARDS,
+  HOW_IT_WORKS,
+  TESTIMONIALS,
+  FAQS
+} from 'public/companyData';
+
+export async function getSiteData() {
+  return {
+    company: COMPANY_INFO,
+    services: SERVICES_DATA,
+    driverStandards: DRIVER_STANDARDS,
+    howItWorks: HOW_IT_WORKS,
+    testimonials: TESTIMONIALS,
+    faqs: FAQS
+  };
+}
+

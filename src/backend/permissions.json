@@ -12,6 +12,32 @@
           "invoke": true
         }
       }
+    },
+    "backend/bookingService.jsw": {
+      "submitBooking": {
+        "siteOwner": { "invoke": true },
+        "siteMember": { "invoke": true },
+        "anonymous": { "invoke": true }
+      },
+      "searchBookings": {
+        "siteOwner": { "invoke": true },
+        "siteMember": { "invoke": true },
+        "anonymous": { "invoke": true }
+      }
+    },
+    "backend/contactService.jsw": {
+      "submitInquiry": {
+        "siteOwner": { "invoke": true },
+        "siteMember": { "invoke": true },
+        "anonymous": { "invoke": true }
+      }
+    },
+    "backend/dataService.jsw": {
+      "getSiteData": {
+        "siteOwner": { "invoke": true },
+        "siteMember": { "invoke": true },
+        "anonymous": { "invoke": true }
+      }
     }
   }
 }

@@ -1,0 +1,134 @@
+import wixData from 'wix-data';
+
+const BOOKINGS_COLLECTION = 'Bookings';
+
+function validateServerBooking(data) {
+  const errors = {};
+  if (!data || typeof data !== 'object') {
+    return { isValid: false, errors: { form: 'Invalid booking payload' } };
+  }
+  if (!data.serviceType) errors.serviceType = 'Service type is required';
+  if (!data.firstName || !String(data.firstName).trim()) errors.firstName = 'First name is required';
+  if (!data.lastName || !String(data.lastName).trim()) errors.lastName = 'Last name is required';
+
+  const phoneDigits = String(data.phone || '').replace(/\D/g, '');
+  if (phoneDigits.length < 10) errors.phone = 'Valid 10-digit telephone number is required';
+
+  const email = String(data.email || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Valid email address is required';
+
+  if (!data.pickupDate) errors.pickupDate = 'Pickup date is required';
+  if (!data.pickupTime) errors.pickupTime = 'Pickup time is required';
+  if (data.tripType === 'round_trip' && !data.returnTime) {
+    errors.returnTime = 'Return time is required for round trips';
+  }
+  if (!data.pickupAddress || !String(data.pickupAddress).trim()) {
+    errors.pickupAddress = 'Pickup address is required';
+  }
+  if (!data.destinationAddress || !String(data.destinationAddress).trim()) {
+    errors.destinationAddress = 'Destination address is required';
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+}
+
+/**
+ * Submit a new non-emergency medical transportation booking request.
+ * Persists to Wix CMS 'Bookings' collection when available.
+ */
+export async function submitBooking(payload) {
+  const validation = validateServerBooking(payload);
+  if (!validation.isValid) {
+    return {
+      success: false,
+      errors: validation.errors,
+      message: 'Please review the highlighted booking fields.'
+    };
+  }
+
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+  const bookingId = `CCR-${new Date().getFullYear()}-${randomSuffix}`;
+  const nowIso = new Date().toISOString();
+
+  const record = {
+    bookingId,
+    id: bookingId,
+    createdAt: nowIso,
+    status: 'pending_review',
+    serviceType: String(payload.serviceType),
+    tripType: payload.tripType === 'one_way' ? 'one_way' : 'round_trip',
+    pickupDate: String(payload.pickupDate),
+    pickupTime: String(payload.pickupTime),
+    returnTime: payload.tripType === 'round_trip' ? String(payload.returnTime || '') : '',
+    pickupAddress: String(payload.pickupAddress).trim(),
+    pickupNotes: String(payload.pickupNotes || '').trim(),
+    destinationAddress: String(payload.destinationAddress).trim(),
+    facilityName: String(payload.facilityName || '').trim(),
+    destinationNotes: String(payload.destinationNotes || '').trim(),
+    passengerName: `${String(payload.firstName).trim()} ${String(payload.lastName).trim()}`,
+    passengerPhone: String(payload.phone).trim(),
+    passengerEmail: String(payload.email).trim().toLowerCase(),
+    mobilityNeed: String(payload.mobilityNeed || 'ambulatory'),
+    hasCompanion: Boolean(payload.hasCompanion),
+    companionCount: payload.hasCompanion ? Number(payload.companionCount || 1) : 0,
+    hasStairs: Boolean(payload.hasStairs),
+    specialInstructions: String(payload.specialInstructions || '').trim()
+  };
+
+  let persistedToCms = false;
+  try {
+    await wixData.insert(BOOKINGS_COLLECTION, record, { suppressAuth: true });
+    persistedToCms = true;
+  } catch (err) {
+    // Collection may not be provisioned in Wix CMS yet; return booking cleanly with persistedToCms=false
+    console.warn('Bookings CMS insert skipped or unavailable:', err && err.message ? err.message : err);
+  }
+
+  return {
+    success: true,
+    persistedToCms,
+    booking: record
+  };
+}
+
+/**
+ * Search bookings from Wix CMS 'Bookings' collection by bookingId, phone, or email.
+ */
+export async function searchBookings(queryText) {
+  const q = String(queryText || '').trim();
+  if (!q) {
+    return { success: true, items: [], source: 'cms' };
+  }
+
+  try {
+    const byId = wixData.query(BOOKINGS_COLLECTION).contains('bookingId', q);
+    const byName = wixData.query(BOOKINGS_COLLECTION).contains('passengerName', q);
+    const byPhone = wixData.query(BOOKINGS_COLLECTION).contains('passengerPhone', q);
+    const byEmail = wixData.query(BOOKINGS_COLLECTION).contains('passengerEmail', q.toLowerCase());
+
+    const result = await byId
+      .or(byName)
+      .or(byPhone)
+      .or(byEmail)
+      .descending('createdAt')
+      .limit(50)
+      .find({ suppressAuth: true });
+
+    return {
+      success: true,
+      items: result.items || [],
+      source: 'cms'
+    };
+  } catch (err) {
+    return {
+      success: false,
+      items: [],
+      source: 'local_fallback',
+      message: 'CMS collection not yet provisioned'
+    };
+  }
+}
+

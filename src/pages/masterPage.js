@@ -1,10 +1,11 @@
-// API Reference: https://www.wix.com/velo/reference/api-overview/introduction
-// “Hello, World!” Example: https://learn-code.wix.com/en/article/hello-world
+import wixLocationFrontend from 'wix-location-frontend';
+import { wireHeaderElement, wireNavigationElement } from 'public/veloPageBridge';
 
 $w.onReady(function () {
-    // Write your JavaScript here
+  const path = wixLocationFrontend.path && wixLocationFrontend.path.length
+    ? `/${wixLocationFrontend.path.join('/')}`
+    : '/';
 
-    // To select an element by ID use: $w('#elementID')
-
-    // Click 'Preview' to run your code
+  wireHeaderElement('#ccrHeader', path);
+  wireNavigationElement('#ccrFooter');
 });
