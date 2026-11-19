@@ -138,6 +138,39 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             </div>
           </div>
         </section>
+
+        <section style="background:var(--surface);padding:56px 0;border-top:1px solid var(--line);">
+          <div class="container">
+            <div style="text-align:center;max-width:660px;margin:0 auto 36px;">
+              <span class="eyebrow"><span class="eyebrow-dot"></span> Our Medical Transit Fleet</span>
+              <h2 style="font-size:32px;font-weight:800;margin:8px 0;">ADA-Compliant Vans &amp; Comfort Sedans</h2>
+              <p style="font-size:14px;color:var(--muted);">Every vehicle undergoes daily pre-trip safety inspections, climate calibration, and hospital-grade sanitization.</p>
+            </div>
+            <div class="standards-grid">
+              <div class="std-card" style="padding:0;overflow:hidden;">
+                <img src="${IMAGES.wheelchairSeattleSkyline}" alt="ADA Wheelchair Accessible Van with hydraulic lift" style="width:100%;height:190px;object-fit:cover;display:block;" />
+                <div style="padding:20px;">
+                  <h3 style="font-size:17px;font-weight:800;margin-bottom:6px;">ADA Wheelchair Accessible Vans</h3>
+                  <p style="font-size:13px;color:var(--muted);line-height:1.55;">High-roof transit vans with commercial hydraulic lifts, gentle-grade ramps, and certified 4-point Q-Straint tie-downs.</p>
+                </div>
+              </div>
+              <div class="std-card" style="padding:0;overflow:hidden;">
+                <img src="${IMAGES.clinicPickupSedan}" alt="Low-step comfort sedan for ambulatory medical transit" style="width:100%;height:190px;object-fit:cover;display:block;" />
+                <div style="padding:20px;">
+                  <h3 style="font-size:17px;font-weight:800;margin-bottom:6px;">Ambulatory Sedans &amp; SUVs</h3>
+                  <p style="font-size:13px;color:var(--muted);line-height:1.55;">Low-step-in sedans and SUVs ideal for routine clinic visits, specialist consultations, and post-procedure discharges.</p>
+                </div>
+              </div>
+              <div class="std-card" style="padding:0;overflow:hidden;">
+                <img src="${IMAGES.cleanVanInterior}" alt="Spacious sanitized passenger van interior" style="width:100%;height:190px;object-fit:cover;display:block;" />
+                <div style="padding:20px;">
+                  <h3 style="font-size:17px;font-weight:800;margin-bottom:6px;">Spacious &amp; Sanitized Cabins</h3>
+                  <p style="font-size:13px;color:var(--muted);line-height:1.55;">Leather seating, dual-zone climate control, walker/rollator storage, and room for a family caregiver or health aide.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       `;
 
       this.shadowRoot.getElementById('book-safety').addEventListener('click', () => this._navigate('/book-a-ride'));

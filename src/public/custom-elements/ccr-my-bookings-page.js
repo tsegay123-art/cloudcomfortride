@@ -8,6 +8,10 @@ import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrMyBookingsPage extends HTMLElement {
+    static get observedAttributes() {
+      return ['server-bookings'];
+    }
+
     constructor() {
       super();
       this.attachShadow({ mode: 'open' });
@@ -15,6 +19,17 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       this._bookings = [];
       this._voucherBooking = null;
       this._onThemeSync = () => syncThemeHost(this);
+    }
+
+    attributeChangedCallback(name, _oldVal, newVal) {
+      if (name === 'server-bookings' && newVal) {
+        try {
+          const items = JSON.parse(newVal);
+          this.setServerBookings(items);
+        } catch (err) {
+          // Ignore malformed server payload
+        }
+      }
     }
 
     connectedCallback() {
@@ -220,7 +235,8 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       const searchBox = this.shadowRoot.getElementById('search-box');
       if (searchBox) {
         searchBox.addEventListener('input', (e) => {
-          this._search = e.target.value;
+          const target = /** @type {HTMLInputElement | null} */ (e.target);
+          this._search = target ? target.value : '';
           this.render();
         });
       }
@@ -240,6 +256,11 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         btn.addEventListener('click', () => {
           const id = btn.getAttribute('data-remove');
           this._bookings = removeLocalBooking(id);
+          this.dispatchEvent(new CustomEvent('removeBooking', {
+            detail: { bookingId: id },
+            bubbles: true,
+            composed: true
+          }));
           window.dispatchEvent(new CustomEvent('ccr-bookings-updated'));
           this.render();
         });

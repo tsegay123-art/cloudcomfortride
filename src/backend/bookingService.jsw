@@ -132,3 +132,29 @@ export async function searchBookings(queryText) {
   }
 }
 
+/**
+ * Remove or mark a booking as cancelled in Wix CMS 'Bookings' collection.
+ */
+export async function cancelBooking(bookingId) {
+  const id = String(bookingId || '').trim();
+  if (!id) {
+    return { success: false, message: 'Booking ID is required' };
+  }
+
+  try {
+    const res = await wixData.query(BOOKINGS_COLLECTION)
+      .eq('bookingId', id)
+      .limit(1)
+      .find({ suppressAuth: true });
+
+    if (res.items && res.items.length > 0) {
+      const item = res.items[0];
+      await wixData.update(BOOKINGS_COLLECTION, { ...item, status: 'cancelled' }, { suppressAuth: true });
+      return { success: true, bookingId: id };
+    }
+    return { success: true, bookingId: id, message: 'Booking not found in CMS' };
+  } catch (err) {
+    return { success: false, message: 'CMS collection not yet provisioned' };
+  }
+}
+

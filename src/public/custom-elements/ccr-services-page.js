@@ -47,7 +47,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             padding: 4px 0;
           }
           .jump-pill {
-            shrink: 0;
+            flex-shrink: 0;
             white-space: nowrap;
             padding: 7px 14px;
             border-radius: 9999px;

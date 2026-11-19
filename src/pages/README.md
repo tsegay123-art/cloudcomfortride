@@ -12,5 +12,6 @@ This folder contains the Velo page scripts for the Cloud Comfort Ride website (`
 - `Contact.js` — Dispatch & Contact Form (`/contact`), wired to `#ccrContact`.
 - `Privacy Policy.aztx0.js` — Privacy Policy (`/privacy`), wired to `#ccrPrivacy`.
 - `Terms of Service.tqouh.js` — Terms of Service (`/terms`), wired to `#ccrTerms`.
+- `Accessibility Statement.js` — Accessibility Statement (`/accessibility`), wired to `#ccrAccessibility`.
 
-> **Wix Studio Note:** When you add `Services`, `Book A Ride`, `My Bookings`, and `Contact` in the Wix Studio Editor, Wix appends its generated 5-character page IDs (e.g. `Services.<id>.js`) and syncs them to this folder. Copy the corresponding wiring into the synced page file if Wix generates a new ID filename.
+> **Wix Studio Note:** When you add `Services`, `Book A Ride`, `My Bookings`, `Contact`, and `Accessibility Statement` in the Wix Studio Editor, Wix appends its generated 5-character page IDs (e.g. `Services.<id>.js`) and syncs them to this folder. Copy the corresponding wiring into the synced page file if Wix generates a new ID filename.

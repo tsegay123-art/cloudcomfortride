@@ -4,6 +4,10 @@ import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrContactPage extends HTMLElement {
+    static get observedAttributes() {
+      return ['contact-result', 'contact-error'];
+    }
+
     constructor() {
       super();
       this.attachShadow({ mode: 'open' });
@@ -15,6 +19,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         message: ''
       };
       this._isSubmitting = false;
+      this._submitTimer = null;
       this._submitted = false;
       this._error = '';
       this._onThemeSync = () => syncThemeHost(this);
@@ -29,9 +34,25 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
     disconnectedCallback() {
       window.removeEventListener('ccr-theme-change', this._onThemeSync);
+      if (this._submitTimer) {
+        clearTimeout(this._submitTimer);
+        this._submitTimer = null;
+      }
+    }
+
+    attributeChangedCallback(name, _oldVal, newVal) {
+      if (name === 'contact-result' && newVal) {
+        this.setInquiryResult(true);
+      } else if (name === 'contact-error' && newVal) {
+        this.setInquiryResult(false, newVal);
+      }
     }
 
     setInquiryResult(ok, msg = '') {
+      if (this._submitTimer) {
+        clearTimeout(this._submitTimer);
+        this._submitTimer = null;
+      }
       this._isSubmitting = false;
       if (ok) {
         this._submitted = true;
@@ -46,12 +67,16 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       e.preventDefault();
       if (this._isSubmitting) return;
       const sr = this.shadowRoot;
+      const val = (id) => {
+        const el = /** @type {HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null} */ (sr.getElementById(id));
+        return el ? el.value : '';
+      };
       this._state = {
-        name: sr.getElementById('c-name').value,
-        email: sr.getElementById('c-email').value,
-        phone: sr.getElementById('c-phone').value,
-        subject: sr.getElementById('c-subject').value,
-        message: sr.getElementById('c-message').value
+        name: val('c-name'),
+        email: val('c-email'),
+        phone: val('c-phone'),
+        subject: val('c-subject'),
+        message: val('c-message')
       };
 
       const { isValid, errors } = validateContactPayload(this._state);
@@ -74,19 +99,18 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
       this.dispatchEvent(new CustomEvent('submitContact', {
         detail: {
-          payload: { ...this._state },
-          resolve: () => this.setInquiryResult(true),
-          reject: (m) => this.setInquiryResult(false, m)
+          payload: { ...this._state }
         },
         bubbles: true,
         composed: true
       }));
 
-      setTimeout(() => {
+      if (this._submitTimer) clearTimeout(this._submitTimer);
+      this._submitTimer = setTimeout(() => {
         if (this._isSubmitting && !this._submitted) {
-          this.setInquiryResult(true);
+          this.setInquiryResult(false, `Dispatch server did not respond in time. Please call ${COMPANY_INFO.phoneDisplay}.`);
         }
-      }, 1200);
+      }, 15000);
     }
 
     render() {
@@ -119,7 +143,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             align-items: center;
             justify-content: center;
             font-size: 18px;
-            shrink: 0;
+            flex-shrink: 0;
           }
           .form-card {
             padding: 28px;

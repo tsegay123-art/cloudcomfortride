@@ -5,7 +5,7 @@ import './ccr-booking-form';
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrBookRidePage extends HTMLElement {
     static get observedAttributes() {
-      return ['initial-service'];
+      return ['initial-service', 'booking-result', 'booking-error'];
     }
 
     constructor() {
@@ -26,8 +26,20 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       window.removeEventListener('ccr-theme-change', this._onThemeSync);
     }
 
-    attributeChangedCallback() {
-      this.render();
+    attributeChangedCallback(name, _oldVal, newVal) {
+      if (name === 'initial-service') {
+        const form = this.shadowRoot && this.shadowRoot.querySelector('ccr-booking-form');
+        if (form && newVal !== null) {
+          form.setAttribute('initial-service', newVal);
+        } else {
+          this.render();
+        }
+        return;
+      }
+      if ((name === 'booking-result' || name === 'booking-error') && newVal !== null) {
+        const form = this.shadowRoot && this.shadowRoot.querySelector('ccr-booking-form');
+        if (form) form.setAttribute(name, newVal);
+      }
     }
 
     render() {

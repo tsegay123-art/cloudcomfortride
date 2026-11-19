@@ -23,6 +23,11 @@
         "siteOwner": { "invoke": true },
         "siteMember": { "invoke": true },
         "anonymous": { "invoke": true }
+      },
+      "cancelBooking": {
+        "siteOwner": { "invoke": true },
+        "siteMember": { "invoke": true },
+        "anonymous": { "invoke": true }
       }
     },
     "backend/contactService.jsw": {

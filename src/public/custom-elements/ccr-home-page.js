@@ -4,10 +4,21 @@ import './ccr-booking-form';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrHomePage extends HTMLElement {
+    static get observedAttributes() {
+      return ['initial-service', 'booking-result', 'booking-error'];
+    }
+
     constructor() {
       super();
       this.attachShadow({ mode: 'open' });
       this._onThemeSync = () => syncThemeHost(this);
+    }
+
+    attributeChangedCallback(name, _oldVal, newVal) {
+      const form = this.shadowRoot && this.shadowRoot.getElementById('home-booking-form');
+      if (form && newVal !== null) {
+        form.setAttribute(name, newVal);
+      }
     }
 
     connectedCallback() {

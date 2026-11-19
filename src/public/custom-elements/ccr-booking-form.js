@@ -10,7 +10,7 @@ import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrBookingForm extends HTMLElement {
     static get observedAttributes() {
-      return ['initial-service'];
+      return ['initial-service', 'booking-result', 'booking-error'];
     }
 
     constructor() {
@@ -39,6 +39,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       };
       this._errors = {};
       this._isSubmitting = false;
+      this._submitTimer = null;
       this._completedBooking = null;
       this._showVoucher = false;
       this._onThemeSync = () => syncThemeHost(this);
@@ -55,16 +56,33 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
     disconnectedCallback() {
       window.removeEventListener('ccr-theme-change', this._onThemeSync);
+      if (this._submitTimer) {
+        clearTimeout(this._submitTimer);
+        this._submitTimer = null;
+      }
     }
 
     attributeChangedCallback(name, _oldVal, newVal) {
       if (name === 'initial-service' && newVal) {
         this._state.serviceType = newVal;
         this.render();
+      } else if (name === 'booking-result' && newVal) {
+        try {
+          const booking = JSON.parse(newVal);
+          this.setBookingResult(booking);
+        } catch (err) {
+          this.setBookingError('Received an invalid confirmation response. Please call (206) 327-4411.');
+        }
+      } else if (name === 'booking-error' && newVal) {
+        this.setBookingError(newVal);
       }
     }
 
     setBookingResult(booking) {
+      if (this._submitTimer) {
+        clearTimeout(this._submitTimer);
+        this._submitTimer = null;
+      }
       this._isSubmitting = false;
       if (booking) {
         saveLocalBooking(booking);
@@ -75,6 +93,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
     }
 
     setBookingError(message) {
+      if (this._submitTimer) {
+        clearTimeout(this._submitTimer);
+        this._submitTimer = null;
+      }
       this._isSubmitting = false;
       this._errors = { ...this._errors, form: message || 'Unable to submit booking. Please call (206) 327-4411.' };
       this.render();
@@ -83,11 +105,11 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
     _collectValues() {
       const sr = this.shadowRoot;
       const val = (id) => {
-        const el = sr.getElementById(id);
+        const el = /** @type {HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null} */ (sr.getElementById(id));
         return el ? el.value : '';
       };
       const checked = (id) => {
-        const el = sr.getElementById(id);
+        const el = /** @type {HTMLInputElement | null} */ (sr.getElementById(id));
         return el ? Boolean(el.checked) : false;
       };
 
@@ -128,49 +150,24 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       }
 
       this._isSubmitting = true;
+      this._errors = {};
       this.render();
 
       const event = new CustomEvent('submitBooking', {
         detail: {
-          payload: { ...this._state },
-          resolve: (booking) => this.setBookingResult(booking),
-          reject: (msg) => this.setBookingError(msg)
+          payload: { ...this._state }
         },
         bubbles: true,
         composed: true
       });
       this.dispatchEvent(event);
 
-      // Fallback if no Velo listener is attached (e.g., standalone preview)
-      setTimeout(() => {
+      if (this._submitTimer) clearTimeout(this._submitTimer);
+      this._submitTimer = setTimeout(() => {
         if (this._isSubmitting && !this._completedBooking) {
-          const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-          const fallbackBooking = {
-            id: `CCR-${new Date().getFullYear()}-${randomSuffix}`,
-            createdAt: new Date().toISOString(),
-            status: 'pending_review',
-            serviceType: this._state.serviceType,
-            tripType: this._state.tripType,
-            pickupDate: this._state.pickupDate,
-            pickupTime: this._state.pickupTime,
-            returnTime: this._state.tripType === 'round_trip' ? this._state.returnTime : '',
-            pickupAddress: this._state.pickupAddress.trim(),
-            pickupNotes: this._state.pickupNotes.trim(),
-            destinationAddress: this._state.destinationAddress.trim(),
-            facilityName: this._state.facilityName.trim(),
-            destinationNotes: this._state.destinationNotes.trim(),
-            passengerName: `${this._state.firstName.trim()} ${this._state.lastName.trim()}`,
-            passengerPhone: this._state.phone.trim(),
-            passengerEmail: this._state.email.trim(),
-            mobilityNeed: this._state.mobilityNeed,
-            hasCompanion: this._state.hasCompanion,
-            companionCount: this._state.hasCompanion ? this._state.companionCount : 0,
-            hasStairs: this._state.hasStairs,
-            specialInstructions: this._state.specialInstructions.trim()
-          };
-          this.setBookingResult(fallbackBooking);
+          this.setBookingError('Dispatch server did not respond in time. Please call (206) 327-4411 or try again.');
         }
-      }, 1500);
+      }, 15000);
     }
 
     render() {

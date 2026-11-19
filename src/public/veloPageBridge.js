@@ -1,6 +1,6 @@
 import wixLocationFrontend from 'wix-location-frontend';
 import { session } from 'wix-storage-frontend';
-import { submitBooking, searchBookings } from 'backend/bookingService.jsw';
+import { submitBooking, searchBookings, cancelBooking } from 'backend/bookingService.jsw';
 import { submitInquiry } from 'backend/contactService.jsw';
 
 export const SELECTED_SERVICE_KEY = 'ccr_selected_service';
@@ -58,15 +58,14 @@ export function wireBookingElement(selector) {
     try {
       const result = await submitBooking(detail.payload);
       if (result && result.success && result.booking) {
-        if (typeof detail.resolve === 'function') detail.resolve(result.booking);
+        setElementAttribute(selector, 'booking-error', '');
+        setElementAttribute(selector, 'booking-result', JSON.stringify(result.booking));
       } else {
         const msg = (result && result.message) || 'Please check your booking details.';
-        if (typeof detail.reject === 'function') detail.reject(msg);
+        setElementAttribute(selector, 'booking-error', msg);
       }
     } catch (err) {
-      if (typeof detail.reject === 'function') {
-        detail.reject('Unable to reach dispatch server. Please call (206) 327-4411.');
-      }
+      setElementAttribute(selector, 'booking-error', 'Unable to reach dispatch server. Please call (206) 327-4411.');
     }
   });
 }
@@ -79,14 +78,14 @@ export function wireContactElement(selector) {
     try {
       const result = await submitInquiry(detail.payload);
       if (result && result.success) {
-        if (typeof detail.resolve === 'function') detail.resolve(result.inquiry);
+        setElementAttribute(selector, 'contact-error', '');
+        setElementAttribute(selector, 'contact-result', JSON.stringify(result.inquiry || { ok: true }));
       } else {
-        if (typeof detail.reject === 'function') detail.reject(result && result.message);
+        const msg = (result && result.message) || 'Please check your inquiry details.';
+        setElementAttribute(selector, 'contact-error', msg);
       }
     } catch (err) {
-      if (typeof detail.reject === 'function') {
-        detail.reject('Failed to send message. Please call (206) 327-4411.');
-      }
+      setElementAttribute(selector, 'contact-error', 'Failed to send message. Please call (206) 327-4411.');
     }
   });
 }
@@ -95,10 +94,23 @@ export async function wireMyBookingsElement(selector) {
   const el = /** @type {any} */ (getElement(selector));
   if (!el || typeof el.on !== 'function') return;
   wireNavigationElement(selector);
+
+  el.on('removeBooking', async (event) => {
+    const detail = (event && event.detail) || {};
+    if (detail.bookingId) {
+      try {
+        await cancelBooking(detail.bookingId);
+      } catch (e) {
+        // Local storage removal still proceeds in the custom element
+      }
+    }
+  });
+
   try {
     const res = await searchBookings('CCR-');
-    if (res && res.success && Array.isArray(res.items) && typeof el.setServerBookings === 'function') {
-      el.setServerBookings(res.items);
+    if (res && res.success && Array.isArray(res.items)) {
+      const activeItems = res.items.filter((item) => item.status !== 'cancelled');
+      setElementAttribute(selector, 'server-bookings', JSON.stringify(activeItems));
     }
   } catch (e) {
     // Local storage fallback handled inside custom element

@@ -229,6 +229,8 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                 <span>|</span>
                 <button data-nav="/terms">Terms of Service</button>
                 <span>|</span>
+                <button data-nav="/accessibility">Accessibility Statement</button>
+                <span>|</span>
                 <button data-nav="/contact">Contact Us</button>
               </div>
               <div>© ${year} Cloud Comfort Ride. All rights reserved.</div>
