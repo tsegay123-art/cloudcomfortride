@@ -154,7 +154,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             border-top: 5px solid #f3bf28;
             box-shadow: 0 18px 44px rgba(6, 31, 70, 0.09), 0 4px 12px rgba(6, 31, 70, 0.04);
           }
-          label { display: block; font-size: clamp(16px, 1.1vw, 17px); font-weight: 700; margin-bottom: 8px; color: var(--ink); }
+          label { display: block; font-size: clamp(16px, 1.15vw, 18px); font-weight: 700; margin-bottom: 8px; color: var(--ink); }
           input, select, textarea {
             width: 100%;
             padding: 14px 16px;
@@ -162,11 +162,19 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             border: 1.5px solid var(--card-border);
             background: var(--surface-alt);
             color: var(--ink);
-            font-size: 17px;
+            font-size: 18px;
             font-family: inherit;
-            min-height: 56px;
+            min-height: 58px;
             margin-bottom: 18px;
             transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+          }
+          input::placeholder, textarea::placeholder {
+            color: #334155;
+            opacity: 1;
+          }
+          :host([data-theme="dark"]) input::placeholder,
+          :host([data-theme="dark"]) textarea::placeholder {
+            color: #cbd5e1;
           }
           textarea { min-height: 120px; }
           input:focus, select:focus, textarea:focus {

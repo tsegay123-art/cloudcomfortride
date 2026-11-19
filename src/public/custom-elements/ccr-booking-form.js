@@ -332,10 +332,11 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .grid-2 { display: grid; grid-template-columns: 1fr; gap: 18px; }
           @media (min-width: 640px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
           .grid-3 { display: grid; grid-template-columns: 1fr; gap: 18px; }
-          @media (min-width: 640px) { .grid-3 { grid-template-columns: 1fr 1fr 1fr; } }
+          @media (min-width: 640px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+          @media (min-width: 900px) { .grid-3 { grid-template-columns: 1fr 1fr 1fr; } }
           label {
             display: block;
-            font-size: clamp(16px, 1.1vw, 17px);
+            font-size: clamp(16px, 1.15vw, 18px);
             font-weight: 700;
             color: var(--ink);
             margin-bottom: 8px;
@@ -347,10 +348,18 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             border: 1.5px solid var(--card-border);
             background: var(--surface-alt);
             color: var(--ink);
-            font-size: 17px;
+            font-size: 18px;
             font-family: inherit;
-            min-height: 56px;
+            min-height: 58px;
             transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+          }
+          input::placeholder, textarea::placeholder {
+            color: #334155;
+            opacity: 1;
+          }
+          :host([data-theme="dark"]) input::placeholder,
+          :host([data-theme="dark"]) textarea::placeholder {
+            color: #cbd5e1;
           }
           textarea { min-height: 110px; }
           input:focus, select:focus, textarea:focus {

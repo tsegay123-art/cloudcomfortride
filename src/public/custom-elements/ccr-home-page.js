@@ -286,13 +286,13 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           @media (min-width: 1024px) { .flagship { grid-template-columns: 7fr 5fr; align-items: center; } }
           .flagship img { width: 100%; height: 100%; min-height: 260px; object-fit: cover; display: block; }
           .flagship-body { padding: 28px; display: flex; flex-direction: column; gap: 14px; }
-          .grid-4 { display: grid; grid-template-columns: 1fr; gap: 20px; }
+          .grid-4 { display: grid; grid-template-columns: 1fr; gap: 24px; }
           @media (min-width: 640px) { .grid-4 { grid-template-columns: 1fr 1fr; } }
-          @media (min-width: 1024px) { .grid-4 { grid-template-columns: repeat(4, 1fr); } }
-          .grid-3 { display: grid; grid-template-columns: 1fr; gap: 22px; }
+          @media (min-width: 1200px) { .grid-4 { grid-template-columns: repeat(4, 1fr); } }
+          .grid-3 { display: grid; grid-template-columns: 1fr; gap: 26px; }
           @media (min-width: 768px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
-          @media (min-width: 1024px) { .grid-3 { grid-template-columns: repeat(3, 1fr); } }
-          .card-img-wrap { position: relative; height: 220px; overflow: hidden; background: #0f172a; }
+          @media (min-width: 1100px) { .grid-3 { grid-template-columns: repeat(3, 1fr); } }
+          .card-img-wrap { position: relative; aspect-ratio: 16 / 10; min-height: 220px; width: 100%; overflow: hidden; background: #0f172a; }
           .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center 22%; transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1); display: block; }
           .card:hover .card-img-wrap img { transform: scale(1.06); }
           .card-tag {
@@ -325,7 +325,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           :host([data-theme="dark"]) .card-btn:hover { background: #f3bf28; color: #061f46; border-color: #f3bf28; }
           .svc-card { border-top: 4px solid #f3bf28; display: flex; flex-direction: column; justify-content: space-between; }
           .svc-card:hover { transform: translateY(-6px); border-color: #f3bf28; }
-          .svc-list { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 10px; font-size: 16px; color: var(--muted); line-height: 1.55; }
+          .svc-list { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 10px; font-size: 17px; color: var(--ink); line-height: 1.6; }
           .svc-cta-btn {
             width: 100%;
             min-height: 48px;
@@ -466,9 +466,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                       <span class="card-tag ${c.goldBadge ? 'gold' : ''}">${c.badge}</span>
                     </div>
                     <div class="card-body">
-                      <h3 style="font-size:clamp(21px,1.9vw,25px);font-weight:800;">${c.title}</h3>
-                      <div style="font-size:16px;font-weight:700;color:#0369a1;">${c.sub}</div>
-                      <p style="font-size:17px;color:var(--muted);line-height:1.65;">${c.desc}</p>
+                      <h3 style="font-size:clamp(22px,2vw,26px);font-weight:800;">${c.title}</h3>
+                      <div style="font-size:17px;font-weight:700;color:#0369a1;">${c.sub}</div>
+                      <p style="font-size:18px;color:var(--ink);line-height:1.65;">${c.desc}</p>
                     </div>
                   </div>
                   <div style="padding:0 24px 24px;">
@@ -497,10 +497,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                   <div>
                     <div class="card-img-wrap"><img src="${s.img}" alt="${s.title}" loading="lazy" /></div>
                     <div class="card-body" style="position:relative;">
-                      <span style="position:absolute;right:22px;top:22px;font-size:15px;font-weight:800;color:#64748b;background:var(--surface-alt);padding:3px 10px;border-radius:9999px;border:1px solid var(--card-border);">${s.num}</span>
+                      <span style="position:absolute;right:22px;top:22px;font-size:15px;font-weight:800;color:var(--ink);background:var(--surface-alt);padding:4px 12px;border-radius:9999px;border:1px solid var(--card-border);">${s.num}</span>
                       <div style="width:48px;height:48px;border-radius:9999px;background:#eaf2ff;color:#123e77;border:2px solid #8ca5c5;display:flex;align-items:center;justify-content:center;font-size:20px;">${s.icon}</div>
-                      <h3 style="font-size:clamp(22px,2vw,26px);font-weight:800;">${s.title}</h3>
-                      <p style="font-size:17px;color:var(--muted);line-height:1.65;">${s.desc}</p>
+                      <h3 style="font-size:clamp(23px,2.1vw,27px);font-weight:800;">${s.title}</h3>
+                      <p style="font-size:18px;color:var(--ink);line-height:1.65;">${s.desc}</p>
                       <ul class="svc-list">
                         ${s.points.map((pt) => `<li><span style="color:#b88b23;font-weight:900;">✓</span> ${pt}</li>`).join('')}
                       </ul>
@@ -574,7 +574,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
         <!-- INLINE BOOKING FORM -->
         <section class="sec" id="request">
-          <div class="container" style="max-width:900px;">
+          <div class="container" style="max-width:1060px;">
             <div class="sec-head">
               <span class="eyebrow"><span class="eyebrow-dot"></span> Let’s plan your trip</span>
               <h2>Book A <span style="color:var(--gold-accent);">Ride</span></h2>

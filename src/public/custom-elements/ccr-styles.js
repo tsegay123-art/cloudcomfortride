@@ -24,13 +24,13 @@ export const CCR_SHARED_CSS = `
     --gold-accent: #986800;
     --gold-shadow: #c99308;
     --cream: #f7f9fc;
-    --ink: #122747;
-    --muted: #65758b;
+    --ink: #000000;
+    --muted: #000000;
     --line: #dce4ee;
     --surface: #ffffff;
     --surface-alt: #f7f9fc;
     --card-bg: #ffffff;
-    --card-border: #dce4ee;
+    --card-border: #cbd5e1;
     font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
     color: var(--ink);
     display: block;
@@ -41,8 +41,8 @@ export const CCR_SHARED_CSS = `
     --navy: #092754;
     --navy-dark: #030d1a;
     --cream: #061426;
-    --ink: #f1f5f9;
-    --muted: #94a3b8;
+    --ink: #ffffff;
+    --muted: #e2e8f0;
     --line: #1e293b;
     --surface: #040d1a;
     --surface-alt: #061426;
@@ -62,28 +62,29 @@ export const CCR_SHARED_CSS = `
   }
 
   h1 {
-    font-size: clamp(36px, 4.8vw, 62px);
+    font-size: clamp(36px, 5vw, 64px);
     line-height: 1.08;
     font-weight: 800;
   }
 
   h2 {
-    font-size: clamp(28px, 3.6vw, 44px);
+    font-size: clamp(30px, 3.8vw, 44px);
     line-height: 1.15;
     font-weight: 800;
     text-shadow: 0 2px 10px rgba(6, 31, 70, 0.08);
   }
 
   h3 {
-    font-size: clamp(22px, 2.1vw, 26px);
+    font-size: clamp(23px, 2.2vw, 27px);
     line-height: 1.25;
     font-weight: 800;
   }
 
   p {
     margin: 0;
-    font-size: clamp(17px, 1.25vw, 19px);
-    line-height: 1.65;
+    font-size: clamp(18px, 1.35vw, 20px);
+    line-height: 1.7;
+    color: var(--ink);
   }
 
   a { color: inherit; text-decoration: none; }
@@ -108,9 +109,9 @@ export const CCR_SHARED_CSS = `
   }
 
   .container {
-    max-width: 1280px;
+    max-width: 1340px;
     margin: 0 auto;
-    padding: 0 16px;
+    padding: 0 18px;
   }
   @media (min-width: 640px) { .container { padding: 0 24px; } }
   @media (min-width: 1024px) { .container { padding: 0 32px; } }
@@ -176,11 +177,11 @@ export const CCR_SHARED_CSS = `
   }
 
   .eyebrow {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 1.6px;
-    color: #775d23;
+    letter-spacing: 1.4px;
+    color: #061f46;
     display: inline-flex;
     align-items: center;
     gap: 8px;

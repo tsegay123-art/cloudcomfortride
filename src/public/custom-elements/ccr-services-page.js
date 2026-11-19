@@ -77,12 +77,13 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             border-radius: 20px;
             overflow: hidden;
             border: 2px solid var(--card-border);
-            height: 350px;
+            aspect-ratio: 16 / 10;
+            min-height: 280px;
             box-shadow: 0 14px 36px rgba(6, 31, 70, 0.1);
           }
           .svc-img img { width: 100%; height: 100%; object-fit: cover; object-position: center 22%; display: block; transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
           .svc-row:hover .svc-img img { transform: scale(1.04); }
-          .feat-list { list-style: none; padding: 0; margin: 16px 0; display: flex; flex-direction: column; gap: 10px; font-size: 16px; color: var(--ink); line-height: 1.55; }
+          .feat-list { list-style: none; padding: 0; margin: 16px 0; display: flex; flex-direction: column; gap: 10px; font-size: 17px; color: var(--ink); line-height: 1.6; }
         </style>
 
         <section class="banner-hero" style="text-align:left;">
