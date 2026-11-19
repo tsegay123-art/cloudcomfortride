@@ -76,9 +76,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       const bookingCount = attrCount !== null ? Number(attrCount) : getLocalBookings().length;
 
       const navLinks = [
+        { label: 'Home', path: '/', aliases: ['/'] },
         { label: 'Services', path: '/services', aliases: ['/services'] },
-        { label: 'About us', path: '/about', aliases: ['/about', '/about-us'] },
-        { label: 'Why Cloud Medical', path: '/safety-drivers', aliases: ['/safety-drivers', '/fleet'] },
+        { label: 'About Us', path: '/about', aliases: ['/about', '/about-us'] },
+        { label: 'Fleet & Safety', path: '/safety-drivers', aliases: ['/safety-drivers', '/fleet'] },
         { label: 'Contact', path: '/contact', aliases: ['/contact'] },
         { label: 'My Bookings', path: '/my-bookings', aliases: ['/my-bookings'], badge: bookingCount > 0 ? bookingCount : null }
       ];
@@ -103,8 +104,8 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .top-strip {
             background: #f7f9fc;
             border-bottom: 1px solid #dce4ee;
-            font-size: 12px;
-            padding: 6px 0;
+            font-size: 14px;
+            padding: 8px 0;
           }
           :host([data-theme="dark"]) .top-strip {
             background: #030d1a;
@@ -135,17 +136,17 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 11px;
+            font-size: 13px;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.05em;
             color: var(--muted);
           }
           .nav-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            height: 74px;
+            height: 78px;
           }
           .brand {
             display: flex;
@@ -157,24 +158,24 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             text-align: left;
           }
           .brand img {
-            height: 44px;
+            height: 46px;
             width: auto;
             object-fit: contain;
           }
           .brand-title {
             font-family: 'Manrope', sans-serif;
             font-weight: 900;
-            font-size: 20px;
+            font-size: clamp(19px, 1.8vw, 23px);
             color: #061f46;
-            line-height: 1;
+            line-height: 1.05;
             display: block;
           }
           :host([data-theme="dark"]) .brand-title { color: #ffffff; }
           .brand-sub {
-            font-size: 10px;
+            font-size: 12px;
             font-weight: 700;
             color: #123e77;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.06em;
             text-transform: uppercase;
             display: block;
             margin-top: 4px;
@@ -183,8 +184,8 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .desktop-nav {
             display: none;
             align-items: center;
-            gap: 20px;
-            font-size: 14px;
+            gap: 18px;
+            font-size: 16px;
             font-weight: 700;
           }
           @media (min-width: 1024px) {
@@ -196,13 +197,15 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             border: none;
             color: var(--ink);
             font-weight: 700;
-            font-size: 14px;
-            padding: 6px 2px;
+            font-size: 16px;
+            padding: 8px 2px;
+            min-height: 44px;
             display: inline-flex;
             align-items: center;
             gap: 6px;
             border-bottom: 2px solid transparent;
             transition: color 0.15s ease, border-color 0.15s ease;
+            white-space: nowrap;
           }
           .nav-link:hover { color: #123e77; }
           .nav-link.active {
@@ -239,7 +242,8 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .book-pill {
             border-radius: 9999px !important;
             padding: 10px 20px !important;
-            font-size: 13px !important;
+            font-size: 15px !important;
+            min-height: 44px !important;
           }
           .mobile-actions {
             display: flex;
@@ -258,13 +262,14 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .mobile-link {
             width: 100%;
             text-align: left;
-            padding: 12px 14px;
+            padding: 14px 16px;
+            min-height: 48px;
             border-radius: 12px;
             border: none;
             background: transparent;
             color: var(--ink);
             font-weight: 700;
-            font-size: 15px;
+            font-size: 17px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -340,9 +345,6 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
           ${this._mobileOpen ? `
             <div class="mobile-drawer">
-              <button class="mobile-link ${currentPath === '/' ? 'active' : ''}" data-nav="/">
-                <span>Home</span><span>›</span>
-              </button>
               ${navLinks.map((link) => `
                 <button class="mobile-link ${isLinkActive(link) ? 'active' : ''}" data-nav="${link.path}">
                   <span>${link.label} ${link.badge ? `<span class="count-badge">${link.badge}</span>` : ''}</span>

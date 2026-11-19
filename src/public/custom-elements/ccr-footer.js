@@ -64,67 +64,79 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             text-align: left;
             margin-bottom: 14px;
           }
-          .brand-row img { height: 44px; width: auto; }
-          .brand-name { font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 19px; display: block; }
-          .brand-sub { font-size: 11px; color: #f3bf28; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
-          .desc { font-size: 13px; color: #bac8d9; line-height: 1.65; max-width: 360px; margin-bottom: 14px; }
-          .meta { font-size: 12px; color: #9eb0c6; display: flex; flex-direction: column; gap: 6px; }
+          .brand-row img { height: 48px; width: auto; }
+          .brand-name { font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 22px; display: block; }
+          .brand-sub { font-size: 13px; color: #f3bf28; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+          .desc { font-size: 16px; color: #cbd5e1; line-height: 1.65; max-width: 390px; margin-bottom: 16px; }
+          .meta { font-size: 15px; color: #bac8d9; display: flex; flex-direction: column; gap: 10px; line-height: 1.5; }
+          .meta a:hover { color: #f3bf28; text-decoration: underline; }
           .col-title {
             font-family: 'Manrope', sans-serif;
             font-weight: 800;
-            font-size: 13px;
+            font-size: 15px;
             text-transform: uppercase;
             letter-spacing: 0.08em;
             color: #f3bf28;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
           }
-          .nav-col { display: flex; flex-direction: column; gap: 8px; }
+          .nav-col { display: flex; flex-direction: column; gap: 6px; }
           .nav-col button {
             background: none;
             border: none;
-            color: #c8d5e5;
+            color: #e2e8f0;
             text-align: left;
-            padding: 4px 0;
-            font-size: 13px;
+            padding: 6px 0;
+            min-height: 36px;
+            font-size: 16px;
           }
-          .nav-col button:hover { color: #ffffff; }
+          .nav-col button:hover { color: #f3bf28; }
           .dispatch-box {
-            padding: 18px;
+            padding: 20px;
             border-radius: 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.14);
           }
-          .dispatch-eyebrow { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em; color: #f3bf28; display: block; margin-bottom: 6px; }
+          .dispatch-eyebrow { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em; color: #f3bf28; display: block; margin-bottom: 8px; }
           .dispatch-phone {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 800;
             color: #ffffff;
-            margin-top: 8px;
+            margin-top: 10px;
           }
           .dispatch-phone:hover { color: #f3bf28; }
+          .dispatch-email {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #cbd5e1;
+            margin-top: 8px;
+          }
+          .dispatch-email:hover { color: #f3bf28; }
           .disclaimer {
-            padding: 16px 0;
-            font-size: 11px;
-            color: #788ca4;
+            padding: 18px 0;
+            font-size: 14px;
+            color: #9eb0c6;
             border-bottom: 1px solid rgba(36, 54, 80, 0.6);
-            line-height: 1.5;
+            line-height: 1.6;
           }
           .bottom-bar {
-            padding: 20px 0;
+            padding: 22px 0;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
-            gap: 12px;
-            font-size: 12px;
-            color: #8da0b8;
+            gap: 14px;
+            font-size: 15px;
+            color: #bac8d9;
           }
           .legal-links { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
-          .legal-links button { background: none; border: none; color: inherit; font-size: 12px; padding: 2px 0; }
-          .legal-links button:hover { color: #ffffff; }
+          .legal-links button { background: none; border: none; color: inherit; font-size: 15px; padding: 4px 0; min-height: 36px; }
+          .legal-links button:hover { color: #f3bf28; }
           .mobile-float-bar {
             position: fixed;
             bottom: 0;
@@ -142,13 +154,13 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           @media (min-width: 640px) { .mobile-float-bar { display: none; } }
           .float-call {
             flex: 1;
-            min-height: 44px;
+            min-height: 48px;
             border-radius: 12px;
             background: #f1f5f9;
             color: #061f46;
             border: 1px solid #cbd5e1;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -156,14 +168,14 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           }
           .float-book {
             flex: 1;
-            min-height: 44px;
+            min-height: 48px;
             border-radius: 12px;
             background: #f4c832;
             color: #061f46;
             border: 1px solid #f4c832;
             font-family: 'Manrope', sans-serif;
             font-weight: 900;
-            font-size: 13px;
+            font-size: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -186,8 +198,8 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                   Providing compassionate, punctual non-emergency medical transportation throughout Seattle and King County. Wheelchair lifts, clinical appointments, and door-through-door care.
                 </p>
                 <div class="meta">
-                  <div>📍 ${COMPANY_INFO.address}</div>
-                  <div>🕒 Mon – Sun: 6:00 AM – 8:00 PM (On-call priority dispatch)</div>
+                  <div>📍 <a href="${COMPANY_INFO.mapsUrl}" target="_blank" rel="noopener noreferrer">${COMPANY_INFO.address}</a></div>
+                  <div>🕒 ${COMPANY_INFO.operatingHours}</div>
                 </div>
               </div>
 
@@ -196,8 +208,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                 <div class="nav-col">
                   <button data-nav="/">Home</button>
                   <button data-nav="/services">Specialized Services</button>
-                  <button data-nav="/safety-drivers">Drivers &amp; Safety Standards</button>
+                  <button data-nav="/safety-drivers">Fleet &amp; Safety Standards</button>
                   <button data-nav="/about">About Our Company</button>
+                  <button data-nav="/book-a-ride">Book A Ride</button>
                   <button data-nav="/my-bookings">My Bookings &amp; Trip Vouchers</button>
                   <button data-nav="/contact">Contact &amp; Dispatch Support</button>
                 </div>
@@ -205,16 +218,22 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
               <div style="display:flex;flex-direction:column;justify-content:space-between;gap:16px;">
                 <div class="dispatch-box">
-                  <span class="dispatch-eyebrow">24/7 Seattle Dispatch</span>
-                  <p style="font-size:12px;color:#bac8d9;">Need immediate ride coordination or appointment adjustments?</p>
-                  <a class="dispatch-phone" href="tel:${COMPANY_INFO.phoneRaw}">
-                    <span style="color:#f3bf28">☎</span>
-                    <span>${COMPANY_INFO.phoneDisplay}</span>
-                  </a>
+                  <span class="dispatch-eyebrow">Seattle Dispatch</span>
+                  <p style="font-size:15px;color:#cbd5e1;line-height:1.55;">Need immediate ride coordination or appointment adjustments?</p>
+                  <div style="display:flex;flex-direction:column;align-items:flex-start;">
+                    <a class="dispatch-phone" href="tel:${COMPANY_INFO.phoneRaw}">
+                      <span style="color:#f3bf28">☎</span>
+                      <span>${COMPANY_INFO.phoneDisplay}</span>
+                    </a>
+                    <a class="dispatch-email" href="mailto:${COMPANY_INFO.email}">
+                      <span style="color:#f3bf28">✉</span>
+                      <span>${COMPANY_INFO.email}</span>
+                    </a>
+                  </div>
                 </div>
-                <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#8699b0;">
+                <div style="display:flex;align-items:center;justify-content:space-between;font-size:14px;color:#9eb0c6;">
                   <span>King County Licensed NEMT</span>
-                  <button id="scroll-top" style="background:none;border:none;color:#f3bf28;font-weight:700;">Back to top ↑</button>
+                  <button id="scroll-top" style="background:none;border:none;color:#f3bf28;font-weight:700;font-size:15px;">Back to top ↑</button>
                 </div>
               </div>
             </div>

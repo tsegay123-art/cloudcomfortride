@@ -28,6 +28,7 @@ export const COMPANY_INFO = {
   foundedYear: '2023',
   locationCity: 'Seattle, WA',
   address: '1902 E Yesler Way Unit #4, Seattle, WA 98122',
+  mapsUrl: 'https://www.google.com/maps/search/?api=1&query=1902+E+Yesler+Way+Unit+4+Seattle+WA+98122',
   phone: '+1 (206) 327-4411',
   phoneRaw: '+12063274411',
   phoneDisplay: '(206) 327-4411',

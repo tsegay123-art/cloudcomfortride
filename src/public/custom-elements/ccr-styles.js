@@ -61,9 +61,50 @@ export const CCR_SHARED_CSS = `
     margin: 0;
   }
 
-  p { margin: 0; }
+  h1 {
+    font-size: clamp(34px, 4.6vw, 60px);
+    line-height: 1.08;
+    font-weight: 800;
+  }
+
+  h2 {
+    font-size: clamp(28px, 3.6vw, 42px);
+    line-height: 1.15;
+    font-weight: 800;
+  }
+
+  h3 {
+    font-size: clamp(20px, 2vw, 24px);
+    line-height: 1.25;
+    font-weight: 800;
+  }
+
+  p {
+    margin: 0;
+    font-size: clamp(16px, 1.2vw, 18px);
+    line-height: 1.65;
+  }
+
   a { color: inherit; text-decoration: none; }
   button { font-family: inherit; cursor: pointer; }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 3px solid #f3bf28;
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 
   .container {
     max-width: 1280px;
@@ -82,12 +123,12 @@ export const CCR_SHARED_CSS = `
     color: #ffffff;
     border: 2px solid #f3bf28;
     box-shadow: 0 4px 0 #c99308;
-    padding: 12px 22px;
+    padding: 13px 24px;
     border-radius: 10px;
     font-family: 'Manrope', sans-serif;
     font-weight: 700;
-    font-size: 14px;
-    min-height: 44px;
+    font-size: 16px;
+    min-height: 48px;
     transition: transform 0.2s ease, background 0.2s ease;
   }
   .dt-button:hover {
@@ -107,12 +148,12 @@ export const CCR_SHARED_CSS = `
     background: #ffffff;
     color: #061f46;
     border: 2px solid #061f46;
-    padding: 12px 20px;
+    padding: 13px 22px;
     border-radius: 10px;
     font-family: 'Manrope', sans-serif;
     font-weight: 700;
-    font-size: 14px;
-    min-height: 44px;
+    font-size: 16px;
+    min-height: 48px;
     transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
   }
   .dt-button-outline:hover {
@@ -132,10 +173,10 @@ export const CCR_SHARED_CSS = `
   }
 
   .eyebrow {
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 1.8px;
+    letter-spacing: 1.6px;
     color: #775d23;
     display: inline-flex;
     align-items: center;
@@ -156,15 +197,15 @@ export const CCR_SHARED_CSS = `
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 14px;
+    padding: 7px 16px;
     border-radius: 9999px;
     background: rgba(243, 191, 40, 0.2);
     color: #f3bf28;
     border: 1px solid rgba(243, 191, 40, 0.45);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
   }
 
   .pulse-dot {
@@ -183,7 +224,7 @@ export const CCR_SHARED_CSS = `
   .banner-hero {
     background: #061f46;
     color: #ffffff;
-    padding: 56px 0;
+    padding: 64px 0;
     border-bottom: 2px solid #f3bf28;
     text-align: center;
     position: relative;
@@ -193,18 +234,19 @@ export const CCR_SHARED_CSS = `
     background: #030d1a;
   }
   .banner-hero h1 {
-    font-size: clamp(28px, 4.5vw, 48px);
+    font-size: clamp(34px, 4.5vw, 54px);
     font-weight: 800;
     color: #ffffff;
-    margin: 14px 0 12px;
-    line-height: 1.12;
+    margin: 16px 0 14px;
+    line-height: 1.1;
+    text-shadow: 0 2px 14px rgba(4, 19, 41, 0.45);
   }
   .banner-hero p {
-    font-size: 16px;
+    font-size: clamp(17px, 1.4vw, 19px);
     color: #e2e8f0;
-    max-width: 720px;
+    max-width: 740px;
     margin: 0 auto;
-    line-height: 1.6;
+    line-height: 1.65;
   }
 
   .card {

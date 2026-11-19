@@ -40,6 +40,13 @@ function validateServerBooking(data) {
  * Persists to Wix CMS 'Bookings' collection when available.
  */
 export async function submitBooking(payload) {
+  if (payload && payload.website) {
+    return {
+      success: false,
+      errors: { form: 'Submission rejected by spam protection.' },
+      message: 'Submission rejected by spam protection.'
+    };
+  }
   const validation = validateServerBooking(payload);
   if (!validation.isValid) {
     return {

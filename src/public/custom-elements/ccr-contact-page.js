@@ -71,6 +71,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         const el = /** @type {HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null} */ (sr.getElementById(id));
         return el ? el.value : '';
       };
+      if (val('c-website')) return;
       this._state = {
         name: val('c-name'),
         email: val('c-email'),
@@ -146,24 +147,26 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             flex-shrink: 0;
           }
           .form-card {
-            padding: 28px;
+            padding: 32px;
             border-radius: 20px;
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-top: 4px solid #f3bf28;
           }
-          label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+          label { display: block; font-size: 15px; font-weight: 700; margin-bottom: 6px; color: var(--ink); }
           input, select, textarea {
             width: 100%;
-            padding: 11px 13px;
+            padding: 12px 14px;
             border-radius: 10px;
             border: 1.5px solid var(--card-border);
             background: var(--surface-alt);
             color: var(--ink);
-            font-size: 14px;
+            font-size: 16px;
             font-family: inherit;
-            margin-bottom: 14px;
+            min-height: 48px;
+            margin-bottom: 16px;
           }
+          .hp-field { position: absolute; left: -9999px; opacity: 0; height: 0; width: 0; overflow: hidden; }
         </style>
 
         <section class="banner-hero">
@@ -176,33 +179,33 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
         <section style="background:var(--surface);">
           <div class="container contact-layout">
-            <div style="display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;flex-direction:column;gap:18px;">
               <span class="eyebrow"><span class="eyebrow-dot"></span> Get In Touch</span>
-              <h2 style="font-size:28px;font-weight:800;">Seattle Headquarters &amp; Dispatch</h2>
-              <p style="font-size:14px;color:var(--muted);line-height:1.6;">
+              <h2 style="font-size:clamp(28px,3.2vw,36px);font-weight:800;">Seattle Headquarters &amp; Dispatch</h2>
+              <p style="font-size:17px;color:var(--muted);line-height:1.65;">
                 Whether you need assistance coordinating recurring dialysis trips, physical therapy rides, or hospital discharge, our friendly team is ready to assist.
               </p>
 
               <div class="info-card">
                 <div class="info-icon">☎</div>
                 <div>
-                  <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Dispatch Telephone</span>
-                  <a href="tel:${COMPANY_INFO.phoneRaw}" style="display:block;font-size:17px;font-weight:800;margin-top:2px;">${COMPANY_INFO.phoneDisplay}</a>
+                  <span style="font-size:13px;font-weight:700;text-transform:uppercase;color:var(--muted);">Dispatch Telephone</span>
+                  <a href="tel:${COMPANY_INFO.phoneRaw}" style="display:block;font-size:19px;font-weight:800;margin-top:4px;">${COMPANY_INFO.phoneDisplay}</a>
                 </div>
               </div>
               <div class="info-card">
                 <div class="info-icon">✉</div>
                 <div>
-                  <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Email Dispatch</span>
-                  <a href="mailto:${COMPANY_INFO.email}" style="display:block;font-size:15px;font-weight:800;margin-top:2px;">${COMPANY_INFO.email}</a>
+                  <span style="font-size:13px;font-weight:700;text-transform:uppercase;color:var(--muted);">Email Dispatch</span>
+                  <a href="mailto:${COMPANY_INFO.email}" style="display:block;font-size:18px;font-weight:800;margin-top:4px;word-break:break-word;">${COMPANY_INFO.email}</a>
                 </div>
               </div>
               <div class="info-card">
                 <div class="info-icon">📍</div>
                 <div>
-                  <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Seattle Office</span>
-                  <strong style="display:block;font-size:14px;margin-top:2px;">${COMPANY_INFO.address}</strong>
-                  <span style="font-size:12px;color:var(--muted);display:block;margin-top:4px;">${COMPANY_INFO.operatingHours}</span>
+                  <span style="font-size:13px;font-weight:700;text-transform:uppercase;color:var(--muted);">Seattle Office</span>
+                  <a href="${COMPANY_INFO.mapsUrl}" target="_blank" rel="noopener noreferrer" style="display:block;font-size:17px;font-weight:800;margin-top:4px;text-decoration:underline;">${COMPANY_INFO.address}</a>
+                  <span style="font-size:15px;color:var(--muted);display:block;margin-top:6px;line-height:1.5;">${COMPANY_INFO.operatingHours}</span>
                 </div>
               </div>
             </div>
@@ -210,15 +213,19 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             <div class="form-card">
               ${this._submitted ? `
                 <div style="text-align:center;padding:32px 12px;">
-                  <div style="font-size:36px;color:#16a34a;margin-bottom:10px;">✓</div>
-                  <h3 style="font-size:22px;font-weight:800;margin-bottom:8px;">Message Sent to Dispatch</h3>
-                  <p style="font-size:14px;color:var(--muted);margin-bottom:18px;">Thank you for contacting Cloud Comfort Ride. Our Seattle coordinator will reply shortly.</p>
+                  <div style="font-size:40px;color:#16a34a;margin-bottom:12px;">✓</div>
+                  <h3 style="font-size:24px;font-weight:800;margin-bottom:10px;">Message Sent to Dispatch</h3>
+                  <p style="font-size:17px;color:var(--muted);margin-bottom:20px;line-height:1.6;">Thank you for contacting Cloud Comfort Ride. Our Seattle coordinator will reply shortly.</p>
                   <button class="dt-button" id="send-another">Send Another Message</button>
                 </div>
               ` : `
-                <h3 style="font-size:22px;font-weight:800;margin-bottom:16px;">Send a Message to Our Team</h3>
-                ${this._error ? `<div style="padding:10px;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:13px;font-weight:600;margin-bottom:14px;">${this._error}</div>` : ''}
+                <h3 style="font-size:24px;font-weight:800;margin-bottom:18px;">Send a Message to Our Team</h3>
+                ${this._error ? `<div role="alert" style="padding:12px;border-radius:10px;background:#fef2f2;color:#dc2626;font-size:15px;font-weight:600;margin-bottom:16px;">${this._error}</div>` : ''}
                 <form id="contact-form" novalidate>
+                  <div class="hp-field" aria-hidden="true">
+                    <label for="c-website">Website</label>
+                    <input id="c-website" type="text" tabindex="-1" autocomplete="off" />
+                  </div>
                   <label for="c-name">Full Name *</label>
                   <input id="c-name" type="text" placeholder="Your name or clinic coordinator" value="${this._state.name}" />
                   <label for="c-email">Email Address *</label>

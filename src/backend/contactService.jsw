@@ -6,6 +6,12 @@ const INQUIRIES_COLLECTION = 'ContactInquiries';
  * Submit a contact/dispatch inquiry to Wix CMS 'ContactInquiries' collection.
  */
 export async function submitInquiry(payload) {
+  if (payload && payload.website) {
+    return {
+      success: false,
+      message: 'Submission rejected by spam protection.'
+    };
+  }
   if (!payload || !String(payload.name || '').trim() || !String(payload.email || '').trim() || !String(payload.message || '').trim()) {
     return {
       success: false,

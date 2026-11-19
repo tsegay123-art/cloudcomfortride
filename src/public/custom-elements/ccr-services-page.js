@@ -49,12 +49,13 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .jump-pill {
             flex-shrink: 0;
             white-space: nowrap;
-            padding: 7px 14px;
+            padding: 9px 16px;
+            min-height: 44px;
             border-radius: 9999px;
             border: 1px solid var(--card-border);
             background: var(--surface-alt);
             color: var(--ink);
-            font-size: 12px;
+            font-size: 14px;
             font-weight: 700;
           }
           .jump-pill:hover {
@@ -76,10 +77,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             border-radius: 20px;
             overflow: hidden;
             border: 2px solid var(--card-border);
-            height: 320px;
+            height: 340px;
           }
           .svc-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
-          .feat-list { list-style: none; padding: 0; margin: 14px 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--ink); }
+          .feat-list { list-style: none; padding: 0; margin: 16px 0; display: flex; flex-direction: column; gap: 10px; font-size: 16px; color: var(--ink); line-height: 1.55; }
         </style>
 
         <section class="banner-hero" style="text-align:left;">
@@ -124,13 +125,13 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                 </div>
                 <div>
                   <span class="badge-pill" style="background:rgba(18,62,119,0.1);color:#123e77;border-color:rgba(18,62,119,0.25);">${s.badge}</span>
-                  <h2 style="font-size:28px;font-weight:800;margin:10px 0 8px;">${s.title}</h2>
-                  <p style="font-size:14px;font-weight:700;color:var(--gold-accent);margin-bottom:10px;">${s.tagline}</p>
-                  <p style="font-size:14px;color:var(--muted);line-height:1.65;">${s.longDescription}</p>
+                  <h2 style="font-size:clamp(26px,3vw,34px);font-weight:800;margin:12px 0 10px;">${s.title}</h2>
+                  <p style="font-size:17px;font-weight:700;color:var(--gold-accent);margin-bottom:12px;">${s.tagline}</p>
+                  <p style="font-size:17px;color:var(--muted);line-height:1.65;">${s.longDescription}</p>
                   <ul class="feat-list">
                     ${s.features.map((f) => `<li><span style="color:#16a34a;font-weight:900;">✓</span> ${f}</li>`).join('')}
                   </ul>
-                  <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">
+                  <div style="font-size:15px;color:var(--muted);margin-bottom:18px;">
                     <strong>Vehicle Type:</strong> ${s.vehicleType}
                   </div>
                   <button class="dt-button" data-book="${s.id}">Book ${s.title} →</button>

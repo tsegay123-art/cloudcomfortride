@@ -181,97 +181,98 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             max-width: 680px;
           }
           .hero h1 {
-            font-size: clamp(30px, 5vw, 54px);
+            font-size: clamp(34px, 4.8vw, 60px);
             font-weight: 800;
             line-height: 1.08;
             color: #ffffff;
-            margin: 18px 0 16px;
+            margin: 20px 0 18px;
+            text-shadow: 0 2px 14px rgba(4, 19, 41, 0.5);
           }
           .hero-sub {
-            font-size: 16px;
+            font-size: clamp(17px, 1.4vw, 20px);
             color: #f1f5f9;
             line-height: 1.65;
-            max-width: 560px;
-            margin-bottom: 22px;
+            max-width: 580px;
+            margin-bottom: 24px;
           }
           .hero-ctas {
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 22px;
+            gap: 14px;
+            margin-bottom: 24px;
           }
           .hero-checks {
-            padding-top: 14px;
-            border-top: 1px solid rgba(255,255,255,0.2);
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.22);
             display: flex;
             flex-wrap: wrap;
-            gap: 10px 18px;
-            font-size: 12px;
+            gap: 12px 20px;
+            font-size: 15px;
             font-weight: 600;
-            color: #e2e8f0;
-            margin-bottom: 14px;
+            color: #f1f5f9;
+            margin-bottom: 16px;
           }
           .fleet-pill {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 7px 14px;
+            gap: 10px;
+            padding: 9px 16px;
             border-radius: 12px;
-            background: rgba(4, 19, 41, 0.85);
-            border: 1px solid rgba(243, 191, 40, 0.4);
-            font-size: 12px;
+            background: rgba(4, 19, 41, 0.88);
+            border: 1px solid rgba(243, 191, 40, 0.45);
+            font-size: 14px;
           }
           .feature-strip {
             background: var(--surface);
             border-bottom: 1px solid var(--line);
-            padding: 16px 0;
+            padding: 18px 0;
           }
           .feature-pills {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
           }
           .f-pill {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 7px 14px;
+            gap: 9px;
+            padding: 9px 16px;
             border-radius: 9999px;
             background: var(--surface-alt);
             border: 1px solid var(--card-border);
-            font-size: 12px;
+            font-size: 15px;
             font-weight: 700;
           }
           .f-dot {
-            width: 24px;
-            height: 24px;
+            width: 26px;
+            height: 26px;
             border-radius: 9999px;
             color: #ffffff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 13px;
           }
           .promise-ribbon {
             background: #04152f;
             border-top: 1px solid #d6a51b;
             color: #ffffff;
-            padding: 14px 0;
+            padding: 16px 0;
           }
           .promise-grid {
             display: flex;
             flex-wrap: wrap;
             justify-content: space-between;
-            gap: 12px;
-            font-size: 13px;
+            gap: 14px;
+            font-size: 15px;
             font-weight: 700;
           }
-          .sec { padding: 64px 0; background: var(--surface); }
-          .sec-alt { padding: 64px 0; background: var(--surface-alt); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-          .sec-head { text-align: center; max-width: 680px; margin: 0 auto 40px; }
-          .sec-head h2 { font-size: clamp(24px, 3.8vw, 38px); font-weight: 800; color: var(--ink); margin: 8px 0 10px; }
-          .sec-head p { font-size: 14px; color: var(--muted); }
+          .sec { padding: 72px 0; background: var(--surface); }
+          .sec-alt { padding: 72px 0; background: var(--surface-alt); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+          .sec-head { text-align: center; max-width: 720px; margin: 0 auto 44px; }
+          .sec-head h2 { font-size: clamp(28px, 3.8vw, 42px); font-weight: 800; color: var(--ink); margin: 10px 0 12px; }
+          .sec-head p { font-size: clamp(16px, 1.3vw, 18px); color: var(--muted); line-height: 1.65; }
           .flagship {
             border-radius: 24px;
             overflow: hidden;
@@ -296,32 +297,32 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .card:hover .card-img-wrap img { transform: scale(1.05); }
           .card-tag {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 10px;
+            top: 12px;
+            left: 12px;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 13px;
             font-weight: 800;
-            background: rgba(6, 31, 70, 0.88);
+            background: rgba(6, 31, 70, 0.9);
             color: #ffffff;
           }
           .card-tag.gold { background: #f3bf28; color: #061f46; }
-          .card-body { padding: 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+          .card-body { padding: 22px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
           .card-btn {
             width: 100%;
-            min-height: 44px;
+            min-height: 48px;
             border-radius: 10px;
             border: 1.5px solid #061f46;
             background: transparent;
             color: var(--ink);
             font-weight: 700;
-            font-size: 12px;
+            font-size: 16px;
           }
           .card-btn:hover { background: #061f46; color: #ffffff; }
           :host([data-theme="dark"]) .card-btn { border-color: #334155; }
           :host([data-theme="dark"]) .card-btn:hover { background: #f3bf28; color: #061f46; border-color: #f3bf28; }
           .svc-card { border-top: 3px solid #f3bf28; display: flex; flex-direction: column; justify-content: space-between; }
-          .svc-list { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); }
+          .svc-list { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 8px; font-size: 15px; color: var(--muted); line-height: 1.5; }
           .pillar { border-top: 1px solid var(--line); padding-top: 20px; }
           .pillar-icon {
             width: 44px;
@@ -421,13 +422,13 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               <img src="${IMAGES.heroBrandedVanPanoramic}" alt="Cloud Comfort Ride official branded medical transit vehicle in Seattle" />
               <div class="flagship-body">
                 <span class="badge-pill" style="align-self:flex-start;">★ Flagship Seattle Fleet</span>
-                <h3 style="font-size:26px;font-weight:800;color:#fff;">Custom-Branded Medical Transportation Vans</h3>
-                <p style="font-size:13px;color:#e2e8f0;line-height:1.6;">
+                <h3 style="font-size:clamp(22px,2.4vw,30px);font-weight:800;color:#fff;line-height:1.2;">Custom-Branded Medical Transportation Vans</h3>
+                <p style="font-size:16px;color:#e2e8f0;line-height:1.65;">
                   Our official Seattle vehicles feature high roofs, gentle-grade ADA entry steps, low boarding thresholds, stability grab handles, and dedicated rollator walker storage. Operated by certified, empathetic drivers who escort you straight to your clinical check-in.
                 </p>
-                <div style="display:flex;flex-wrap:wrap;gap:10px;padding-top:6px;">
+                <div style="display:flex;flex-wrap:wrap;gap:12px;padding-top:8px;">
                   <button class="dt-button" data-book="non_emergency_medical">Book Accessible Transit →</button>
-                  <a class="dt-button-outline" style="background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.3);" href="tel:${COMPANY_INFO.phoneRaw}">☎ Call (206) 327-4411</a>
+                  <a class="dt-button-outline" style="background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.35);" href="tel:${COMPANY_INFO.phoneRaw}">☎ Call (206) 327-4411</a>
                 </div>
               </div>
             </div>
@@ -441,12 +442,12 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                       <span class="card-tag ${c.goldBadge ? 'gold' : ''}">${c.badge}</span>
                     </div>
                     <div class="card-body">
-                      <h3 style="font-size:16px;font-weight:800;">${c.title}</h3>
-                      <div style="font-size:11px;font-weight:700;color:#0284c7;">${c.sub}</div>
-                      <p style="font-size:12px;color:var(--muted);line-height:1.55;">${c.desc}</p>
+                      <h3 style="font-size:21px;font-weight:800;">${c.title}</h3>
+                      <div style="font-size:14px;font-weight:700;color:#0284c7;">${c.sub}</div>
+                      <p style="font-size:16px;color:var(--muted);line-height:1.6;">${c.desc}</p>
                     </div>
                   </div>
-                  <div style="padding:0 18px 18px;">
+                  <div style="padding:0 22px 22px;">
                     <button class="card-btn" data-book="${c.service}">${c.cta}</button>
                   </div>
                 </div>
@@ -458,12 +459,12 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         <!-- SERVICES -->
         <section class="sec-alt" id="services">
           <div class="container">
-            <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:36px;">
+            <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:40px;">
               <div>
                 <span class="eyebrow"><span class="eyebrow-dot"></span> How we can help</span>
-                <h2 style="font-size:clamp(24px,3.8vw,38px);font-weight:800;margin-top:6px;">Transportation for <span style="color:var(--gold-accent);">real life.</span></h2>
+                <h2 style="font-size:clamp(28px,3.8vw,42px);font-weight:800;margin-top:8px;">Transportation for <span style="color:var(--gold-accent);">real life.</span></h2>
               </div>
-              <p style="font-size:13px;color:var(--muted);max-width:360px;">From important appointments to everyday destinations, explore the ride options available through Cloud Comfort Ride.</p>
+              <p style="font-size:17px;color:var(--muted);max-width:420px;line-height:1.6;">From important appointments to everyday destinations, explore the ride options available through Cloud Comfort Ride.</p>
             </div>
 
             <div class="grid-3">
@@ -472,17 +473,17 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                   <div>
                     <div class="card-img-wrap"><img src="${s.img}" alt="${s.title}" loading="lazy" /></div>
                     <div class="card-body" style="position:relative;">
-                      <span style="position:absolute;right:18px;top:18px;font-size:12px;font-weight:800;color:#94a3b8;">${s.num}</span>
-                      <div style="width:40px;height:40px;border-radius:9999px;background:#eaf2ff;color:#123e77;border:2px solid #8ca5c5;display:flex;align-items:center;justify-content:center;font-size:17px;">${s.icon}</div>
-                      <h3 style="font-size:17px;font-weight:800;">${s.title}</h3>
-                      <p style="font-size:12px;color:var(--muted);line-height:1.55;">${s.desc}</p>
+                      <span style="position:absolute;right:20px;top:20px;font-size:14px;font-weight:800;color:#94a3b8;">${s.num}</span>
+                      <div style="width:44px;height:44px;border-radius:9999px;background:#eaf2ff;color:#123e77;border:2px solid #8ca5c5;display:flex;align-items:center;justify-content:center;font-size:19px;">${s.icon}</div>
+                      <h3 style="font-size:22px;font-weight:800;">${s.title}</h3>
+                      <p style="font-size:16px;color:var(--muted);line-height:1.6;">${s.desc}</p>
                       <ul class="svc-list">
                         ${s.points.map((pt) => `<li><span style="color:#b88b23;font-weight:900;">✓</span> ${pt}</li>`).join('')}
                       </ul>
                     </div>
                   </div>
-                  <div style="padding:12px 18px;border-top:1px solid var(--line);">
-                    <button data-book="${s.service}" style="background:none;border:none;color:var(--ink);font-weight:800;font-size:13px;padding:6px 0;">
+                  <div style="padding:14px 22px;border-top:1px solid var(--line);">
+                    <button data-book="${s.service}" style="background:none;border:none;color:var(--ink);font-weight:800;font-size:16px;padding:8px 0;min-height:44px;">
                       Book this ride →
                     </button>
                   </div>
@@ -495,10 +496,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         <!-- ABOUT VALUES -->
         <section class="sec">
           <div class="container">
-            <div style="max-width:620px;margin-bottom:32px;">
+            <div style="max-width:680px;margin-bottom:36px;">
               <span class="eyebrow"><span class="eyebrow-dot"></span> A ride you can feel good about</span>
-              <h2 style="font-size:clamp(24px,3.8vw,38px);font-weight:800;margin:8px 0 12px;">More than a ride.<br /><span style="color:var(--gold-accent);">A caring experience.</span></h2>
-              <p style="font-size:14px;color:var(--muted);line-height:1.6;">
+              <h2 style="font-size:clamp(28px,3.8vw,42px);font-weight:800;margin:10px 0 14px;">More than a ride.<br /><span style="color:var(--gold-accent);">A caring experience.</span></h2>
+              <p style="font-size:17px;color:var(--muted);line-height:1.65;">
                 Getting from one place to another can be a big part of someone’s day. We aim to make that journey feel easier with respectful service, clear communication, and attention to each passenger’s needs.
               </p>
             </div>
@@ -507,22 +508,22 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               <article class="card">
                 <div class="card-img-wrap"><img src="${IMAGES.clinicPickupSedan}" alt="Respect at every step" loading="lazy" /></div>
                 <div class="card-body">
-                  <strong style="font-size:15px;">Respect at every step</strong>
-                  <p style="font-size:12px;color:var(--muted);">We treat every passenger with dignity, patience, and kindness.</p>
+                  <strong style="font-size:21px;font-family:'Manrope',sans-serif;">Respect at every step</strong>
+                  <p style="font-size:16px;color:var(--muted);line-height:1.6;">We treat every passenger with dignity, patience, and kindness.</p>
                 </div>
               </article>
               <article class="card">
                 <div class="card-img-wrap"><img src="${IMAGES.medicalCenterVanDoctor}" alt="Communication you can count on" loading="lazy" /></div>
                 <div class="card-body">
-                  <strong style="font-size:15px;">Communication you can count on</strong>
-                  <p style="font-size:12px;color:var(--muted);">We’ll work with you and your clinic to coordinate your ride request.</p>
+                  <strong style="font-size:21px;font-family:'Manrope',sans-serif;">Communication you can count on</strong>
+                  <p style="font-size:16px;color:var(--muted);line-height:1.6;">We’ll work with you and your clinic to coordinate your ride request.</p>
                 </div>
               </article>
               <article class="card">
                 <div class="card-img-wrap"><img src="${IMAGES.wheelchairSeattleSkyline}" alt="Thoughtful transportation" loading="lazy" /></div>
                 <div class="card-body">
-                  <strong style="font-size:15px;">Thoughtful transportation</strong>
-                  <p style="font-size:12px;color:var(--muted);">Your destination and individual medical needs matter.</p>
+                  <strong style="font-size:21px;font-family:'Manrope',sans-serif;">Thoughtful transportation</strong>
+                  <p style="font-size:16px;color:var(--muted);line-height:1.6;">Your destination and individual medical needs matter.</p>
                 </div>
               </article>
             </div>
@@ -538,10 +539,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               <p>Our goal is to make arranging transportation clear and comfortable from the first conversation.</p>
             </div>
             <div class="grid-4">
-              <div class="pillar"><div class="pillar-icon">♡</div><h3 style="font-size:16px;font-weight:800;margin-bottom:6px;">Caring service</h3><p style="font-size:12px;color:var(--muted);line-height:1.55;">A courteous, passenger-first approach on every trip across Seattle.</p></div>
-              <div class="pillar"><div class="pillar-icon">✓</div><h3 style="font-size:16px;font-weight:800;margin-bottom:6px;">Reliable communication</h3><p style="font-size:12px;color:var(--muted);line-height:1.55;">We review requests, coordinate timing, and communicate next steps clearly.</p></div>
-              <div class="pillar"><div class="pillar-icon">⌖</div><h3 style="font-size:16px;font-weight:800;margin-bottom:6px;">Local Seattle focus</h3><p style="font-size:12px;color:var(--muted);line-height:1.55;">Centrally located at 1902 E Yesler Way, serving Seattle &amp; King County.</p></div>
-              <div class="pillar"><div class="pillar-icon">✧</div><h3 style="font-size:16px;font-weight:800;margin-bottom:6px;">Personal attention</h3><p style="font-size:12px;color:var(--muted);line-height:1.55;">Dedicated drivers assigned to clinics, fostering familiarity and trust.</p></div>
+              <div class="pillar"><div class="pillar-icon">♡</div><h3 style="font-size:21px;font-weight:800;margin-bottom:8px;">Caring service</h3><p style="font-size:16px;color:var(--muted);line-height:1.6;">A courteous, passenger-first approach on every trip across Seattle.</p></div>
+              <div class="pillar"><div class="pillar-icon">✓</div><h3 style="font-size:21px;font-weight:800;margin-bottom:8px;">Reliable communication</h3><p style="font-size:16px;color:var(--muted);line-height:1.6;">We review requests, coordinate timing, and communicate next steps clearly.</p></div>
+              <div class="pillar"><div class="pillar-icon">⌖</div><h3 style="font-size:21px;font-weight:800;margin-bottom:8px;">Local Seattle focus</h3><p style="font-size:16px;color:var(--muted);line-height:1.6;">Centrally located at 1902 E Yesler Way, serving Seattle &amp; King County.</p></div>
+              <div class="pillar"><div class="pillar-icon">✧</div><h3 style="font-size:21px;font-weight:800;margin-bottom:8px;">Personal attention</h3><p style="font-size:16px;color:var(--muted);line-height:1.6;">Dedicated drivers assigned to clinics, fostering familiarity and trust.</p></div>
             </div>
           </div>
         </section>
@@ -563,24 +564,24 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           <div class="container">
             <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:16px;padding-bottom:28px;">
               <div>
-                <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.8px;color:#f3bf28;">Direct Contact</span>
-                <h2 style="font-size:28px;font-weight:800;color:#fff;margin-top:4px;">We Want to Hear from You.</h2>
+                <span style="font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:1.6px;color:#f3bf28;">Direct Contact</span>
+                <h2 style="font-size:clamp(28px,3.2vw,36px);font-weight:800;color:#fff;margin-top:6px;">We Want to Hear from You.</h2>
               </div>
-              <p style="font-size:13px;color:#b9c6d8;max-width:420px;">Call us or message us for more info, or to coordinate recurring medical appointment transit.</p>
+              <p style="font-size:17px;color:#cbd5e1;max-width:460px;line-height:1.6;">Call us or message us for more info, or to coordinate recurring medical appointment transit.</p>
             </div>
             <div class="contact-grid">
-              <a href="mailto:${COMPANY_INFO.email}">
-                <span style="font-size:12px;color:#c1ccda;display:block;">Email</span>
-                <strong style="font-size:15px;color:#fff;">${COMPANY_INFO.email}</strong>
+              <a href="mailto:${COMPANY_INFO.email}" style="padding:12px;border-radius:12px;">
+                <span style="font-size:14px;color:#cbd5e1;display:block;margin-bottom:4px;">Email Dispatch</span>
+                <strong style="font-size:18px;color:#fff;">${COMPANY_INFO.email}</strong>
               </a>
-              <a href="tel:${COMPANY_INFO.phoneRaw}">
-                <span style="font-size:12px;color:#c1ccda;display:block;">Phone</span>
-                <strong style="font-size:16px;color:#fff;">${COMPANY_INFO.phoneDisplay}</strong>
+              <a href="tel:${COMPANY_INFO.phoneRaw}" style="padding:12px;border-radius:12px;">
+                <span style="font-size:14px;color:#cbd5e1;display:block;margin-bottom:4px;">Phone Dispatch</span>
+                <strong style="font-size:20px;color:#fff;">${COMPANY_INFO.phoneDisplay}</strong>
               </a>
-              <div>
-                <span style="font-size:12px;color:#c1ccda;display:block;">Business office</span>
-                <strong style="font-size:13px;color:#fff;">1902 E Yesler Way Unit #4, Seattle WA</strong>
-              </div>
+              <a href="${COMPANY_INFO.mapsUrl}" target="_blank" rel="noopener noreferrer" style="padding:12px;border-radius:12px;">
+                <span style="font-size:14px;color:#cbd5e1;display:block;margin-bottom:4px;">Business Office (Open Map)</span>
+                <strong style="font-size:17px;color:#fff;">${COMPANY_INFO.address}</strong>
+              </a>
             </div>
           </div>
         </section>

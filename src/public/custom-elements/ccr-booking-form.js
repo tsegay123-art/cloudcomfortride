@@ -132,7 +132,8 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         hasCompanion: checked('hasCompanion'),
         companionCount: Number(val('companionCount') || 1),
         hasStairs: checked('hasStairs'),
-        specialInstructions: val('specialInstructions')
+        specialInstructions: val('specialInstructions'),
+        website: val('b-website')
       };
     }
 
@@ -140,6 +141,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       e.preventDefault();
       if (this._isSubmitting) return;
       this._collectValues();
+      if (this._state.website) return;
       const { isValid, errors } = validateBookingPayload(this._state);
       this._errors = errors;
       if (!isValid) {
@@ -301,9 +303,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .section-head {
             font-family: 'Manrope', sans-serif;
             font-weight: 800;
-            font-size: 16px;
+            font-size: 19px;
             color: #061f46;
-            margin: 22px 0 12px;
+            margin: 24px 0 14px;
             padding-bottom: 8px;
             border-bottom: 1px solid var(--line);
             display: flex;
@@ -311,32 +313,32 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             gap: 8px;
           }
           :host([data-theme="dark"]) .section-head { color: #f3bf28; }
-          .grid-2 { display: grid; grid-template-columns: 1fr; gap: 14px; }
+          .grid-2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
           @media (min-width: 640px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
-          .grid-3 { display: grid; grid-template-columns: 1fr; gap: 14px; }
+          .grid-3 { display: grid; grid-template-columns: 1fr; gap: 16px; }
           @media (min-width: 640px) { .grid-3 { grid-template-columns: 1fr 1fr 1fr; } }
           label {
             display: block;
-            font-size: 12px;
+            font-size: 15px;
             font-weight: 700;
             color: var(--ink);
             margin-bottom: 6px;
           }
           input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="time"], input[type="number"], select, textarea {
             width: 100%;
-            padding: 11px 13px;
+            padding: 12px 14px;
             border-radius: 10px;
             border: 1.5px solid var(--card-border);
             background: var(--surface-alt);
             color: var(--ink);
-            font-size: 14px;
+            font-size: 16px;
             font-family: inherit;
-            min-height: 44px;
+            min-height: 48px;
           }
           input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #123e77;
-            box-shadow: 0 0 0 3px rgba(18, 62, 119, 0.12);
+            box-shadow: 0 0 0 3px rgba(18, 62, 119, 0.14);
           }
           .trip-toggle {
             display: grid;
@@ -344,13 +346,14 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             gap: 10px;
           }
           .trip-btn {
-            padding: 11px;
+            padding: 12px;
+            min-height: 48px;
             border-radius: 10px;
             border: 1.5px solid var(--card-border);
             background: var(--surface-alt);
             color: var(--ink);
             font-weight: 700;
-            font-size: 13px;
+            font-size: 15px;
           }
           .trip-btn.active {
             background: #061f46;
@@ -361,16 +364,18 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 10px 12px;
+            padding: 12px 14px;
+            min-height: 48px;
             border-radius: 10px;
             border: 1px solid var(--card-border);
             background: var(--surface-alt);
-            font-size: 13px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
           }
-          .check-row input { width: 18px; height: 18px; min-height: auto; }
-          .err-msg { color: #dc2626; font-size: 12px; font-weight: 600; margin-top: 4px; }
+          .check-row input { width: 20px; height: 20px; min-height: auto; flex-shrink: 0; }
+          .err-msg { color: #dc2626; font-size: 14px; font-weight: 600; margin-top: 5px; }
+          .hp-field { position: absolute; left: -9999px; opacity: 0; height: 0; width: 0; overflow: hidden; }
           .submit-bar {
             margin-top: 24px;
             display: flex;
@@ -380,7 +385,11 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         </style>
 
         <form class="form-wrap" id="booking-form" novalidate>
-          ${e.form ? `<div class="err-msg" style="padding:10px;background:#fef2f2;border-radius:8px;margin-bottom:12px;">${e.form}</div>` : ''}
+          ${e.form ? `<div class="err-msg" role="alert" style="padding:12px;background:#fef2f2;border-radius:10px;margin-bottom:14px;">${e.form}</div>` : ''}
+          <div class="hp-field" aria-hidden="true">
+            <label for="b-website">Website</label>
+            <input type="text" id="b-website" tabindex="-1" autocomplete="off" />
+          </div>
 
           <div class="section-head" style="margin-top:0;">1. Service &amp; Schedule</div>
           <div class="grid-2">
@@ -516,10 +525,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           </div>
 
           <div class="submit-bar">
-            <button type="submit" class="dt-button" style="width:100%;font-size:15px;padding:14px 24px;" ${this._isSubmitting ? 'disabled' : ''}>
+            <button type="submit" class="dt-button" style="width:100%;font-size:17px;padding:15px 24px;min-height:52px;" ${this._isSubmitting ? 'disabled' : ''}>
               ${this._isSubmitting ? 'Submitting to Seattle Dispatch...' : '📅 Request Medical Ride Confirmation →'}
             </button>
-            <p style="text-align:center;font-size:12px;color:var(--muted);">
+            <p style="text-align:center;font-size:15px;color:var(--muted);">
               Need immediate same-day dispatch? Call <strong><a href="tel:${COMPANY_INFO.phoneRaw}">${COMPANY_INFO.phoneDisplay}</a></strong>
             </p>
           </div>

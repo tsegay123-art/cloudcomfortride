@@ -44,12 +44,14 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 20px;
-            padding: 32px;
+            padding: 36px;
             max-width: 860px;
             margin: 0 auto;
           }
-          .prose-card h2 { font-size: 20px; font-weight: 800; margin: 22px 0 8px; }
-          .prose-card p { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 10px; }
+          .prose-card h2 { font-size: clamp(22px, 2.4vw, 28px); font-weight: 800; margin: 26px 0 10px; }
+          .prose-card p { font-size: 17px; color: var(--muted); line-height: 1.7; margin-bottom: 14px; }
+          .prose-card a { color: #123e77; font-weight: 700; text-decoration: underline; }
+          :host([data-theme="dark"]) .prose-card a { color: #f3bf28; }
         </style>
 
         <section class="banner-hero">

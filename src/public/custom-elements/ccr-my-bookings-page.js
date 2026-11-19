@@ -101,12 +101,13 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .search-input {
             flex: 1;
             min-width: 240px;
-            padding: 11px 14px;
+            padding: 12px 16px;
+            min-height: 48px;
             border-radius: 10px;
             border: 1.5px solid var(--card-border);
             background: var(--surface-alt);
             color: var(--ink);
-            font-size: 14px;
+            font-size: 16px;
           }
           .booking-card {
             background: var(--card-bg);
@@ -128,11 +129,11 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           }
           .b-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-            font-size: 13px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            font-size: 16px;
           }
-          .b-grid span { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+          .b-grid span { display: block; font-size: 13px; color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
           .voucher-overlay {
             position: fixed;
             inset: 0;
@@ -177,14 +178,14 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             </div>
 
             ${filtered.length === 0 ? `
-              <div class="card" style="padding:48px 24px;text-align:center;">
-                <h3 style="font-size:20px;font-weight:800;margin-bottom:8px;">No Bookings Found</h3>
-                <p style="font-size:14px;color:var(--muted);max-width:460px;margin:0 auto 20px;">
+              <div class="card" style="padding:52px 24px;text-align:center;">
+                <h3 style="font-size:24px;font-weight:800;margin-bottom:10px;">No Bookings Found</h3>
+                <p style="font-size:17px;color:var(--muted);max-width:520px;margin:0 auto 22px;line-height:1.6;">
                   ${this._bookings.length === 0
                     ? 'You have not submitted a ride request from this browser yet. Book a medical ride online or call Seattle dispatch.'
                     : 'No bookings matched your search query.'}
                 </p>
-                <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
+                <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;">
                   <button class="dt-button" id="empty-book">Book a Ride Online</button>
                   <a class="dt-button-outline" href="tel:${COMPANY_INFO.phoneRaw}">☎ Call ${COMPANY_INFO.phoneDisplay}</a>
                 </div>
@@ -195,14 +196,14 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                 <div class="booking-card">
                   <div class="b-head">
                     <div>
-                      <strong style="font-size:17px;">${bid}</strong>
-                      <span style="margin-left:10px;padding:3px 10px;border-radius:9999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:800;">
+                      <strong style="font-size:20px;">${bid}</strong>
+                      <span style="margin-left:10px;padding:4px 12px;border-radius:9999px;background:#fef3c7;color:#92400e;font-size:13px;font-weight:800;">
                         ${(b.status || 'pending_review').replace('_', ' ').toUpperCase()}
                       </span>
                     </div>
-                    <div style="display:flex;gap:8px;">
-                      <button class="dt-button" style="padding:8px 14px;font-size:12px;" data-voucher="${bid}">🖨 Trip Voucher</button>
-                      <button class="dt-button-outline" style="padding:8px 12px;font-size:12px;" data-remove="${bid}">Remove</button>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                      <button class="dt-button" style="padding:10px 16px;font-size:15px;min-height:44px;" data-voucher="${bid}">🖨 Trip Voucher</button>
+                      <button class="dt-button-outline" style="padding:10px 14px;font-size:15px;min-height:44px;" data-remove="${bid}">Remove</button>
                     </div>
                   </div>
                   <div class="b-grid">
