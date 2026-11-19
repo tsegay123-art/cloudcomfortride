@@ -25,15 +25,21 @@ export const CCR_SHARED_CSS = `
     --gold-shadow: #c99308;
     --cream: #f7f9fc;
     --ink: #122747;
-    --muted: #65758b;
+    --ink-strong: #061f46;
+    --body-ink: #1e293b;
+    --muted: #475569;
+    --muted-readable: #475569;
     --line: #dce4ee;
     --surface: #ffffff;
     --surface-alt: #f7f9fc;
     --card-bg: #ffffff;
     --card-border: #dce4ee;
+    --text-3d-light: 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 0 rgba(6, 31, 70, 0.08), 0 6px 14px rgba(6, 31, 70, 0.1);
+    --text-3d-dark: 0 1px 0 rgba(4, 19, 41, 0.85), 0 2px 0 rgba(4, 19, 41, 0.6), 0 8px 20px rgba(2, 11, 24, 0.55);
     font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
     color: var(--ink);
     display: block;
+    width: 100%;
     box-sizing: border-box;
   }
 
@@ -42,13 +48,17 @@ export const CCR_SHARED_CSS = `
     --navy-dark: #030d1a;
     --cream: #061426;
     --ink: #f1f5f9;
-    --muted: #94a3b8;
+    --ink-strong: #ffffff;
+    --body-ink: #e2e8f0;
+    --muted: #cbd5e1;
+    --muted-readable: #cbd5e1;
     --line: #1e293b;
     --surface: #040d1a;
     --surface-alt: #061426;
     --card-bg: #091b33;
     --card-border: #1e293b;
     --gold-accent: #f3bf28;
+    --text-3d-light: 0 1px 0 rgba(3, 13, 26, 0.85), 0 3px 12px rgba(2, 11, 24, 0.55);
   }
 
   *, *::before, *::after {
@@ -211,8 +221,113 @@ export const CCR_SHARED_CSS = `
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     border-radius: 16px;
-    box-shadow: 0 15px 40px rgba(16, 44, 77, 0.04);
+    box-shadow: 0 15px 40px rgba(16, 44, 77, 0.05);
     overflow: hidden;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+
+  /* Premium 3D Typography System */
+  .ccr-hero-title {
+    font-family: 'Manrope', system-ui, sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 4.8vw, 3.6rem);
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    color: #ffffff;
+    text-shadow: var(--text-3d-dark);
+    animation: ccrFadeUp 0.55s ease-out both;
+  }
+
+  .ccr-hero-title-accent {
+    display: inline-block;
+    background: linear-gradient(180deg, #ffe285 0%, #f3bf28 58%, #d69d08 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: #f3bf28;
+    filter: drop-shadow(0 2px 4px rgba(3, 13, 26, 0.6));
+  }
+
+  .ccr-hero-lead {
+    font-size: clamp(1rem, 1.45vw, 1.15rem);
+    line-height: 1.7;
+    color: #f1f5f9;
+    font-weight: 500;
+    max-width: 56ch;
+    text-shadow: 0 1px 3px rgba(3, 13, 26, 0.65);
+    animation: ccrFadeUp 0.65s ease-out both;
+  }
+
+  .ccr-section-title {
+    font-family: 'Manrope', system-ui, sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.625rem, 3.4vw, 2.5rem);
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    color: var(--ink-strong);
+    text-shadow: var(--text-3d-light);
+    transition: transform 0.25s ease;
+  }
+
+  .ccr-section-title-dark {
+    font-family: 'Manrope', system-ui, sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    line-height: 1.16;
+    letter-spacing: -0.025em;
+    color: #ffffff;
+    text-shadow: var(--text-3d-dark);
+  }
+
+  .ccr-section-lead {
+    font-size: clamp(0.9375rem, 1.25vw, 1.0625rem);
+    line-height: 1.68;
+    color: var(--muted-readable);
+    max-width: 60ch;
+  }
+
+  .ccr-card-title {
+    font-family: 'Manrope', system-ui, sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.0625rem, 1.35vw, 1.2rem);
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+    color: var(--ink-strong);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+  }
+  :host([data-theme="dark"]) .ccr-card-title {
+    text-shadow: 0 1px 2px rgba(2, 11, 24, 0.6);
+  }
+
+  .ccr-card-desc {
+    font-size: 0.90625rem;
+    line-height: 1.65;
+    color: var(--muted-readable);
+  }
+
+  @keyframes ccrFadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ccr-hero-title,
+    .ccr-hero-lead,
+    .pulse-dot {
+      animation: none !important;
+    }
+    .card,
+    .dt-button,
+    .dt-button-outline,
+    .ccr-section-title {
+      transition: none !important;
+    }
   }
 `;
 
