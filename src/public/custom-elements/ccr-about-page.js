@@ -1,5 +1,5 @@
 import { COMPANY_INFO, IMAGES } from '../companyData';
-import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
+import { CCR_SHARED_CSS, ensureGoogleFonts, initScrollReveals, syncThemeHost } from './ccr-styles';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrAboutPage extends HTMLElement {
@@ -87,8 +87,8 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               </div>
             </div>
 
-            <div class="card" style="border:2px solid var(--card-border);">
-              <img src="${IMAGES.heroBrandedVanPanoramic}" alt="Cloud Comfort Ride official branded transit van" style="width:100%;height:340px;object-fit:cover;display:block;" />
+            <div class="card reveal" style="border:2px solid var(--card-border);">
+              <img src="${IMAGES.heroBrandedVanPanoramic}" alt="Cloud Comfort Ride official branded transit van" style="width:100%;aspect-ratio:16/10;min-height:260px;object-fit:cover;object-position:center 25%;display:block;" />
               <div style="padding:22px;background:#061f46;color:#fff;border-top:2px solid #f3bf28;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;">
                 <div>
                   <strong style="font-size:18px;display:block;">Compassionate Patient Assistance</strong>
@@ -124,6 +124,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       `;
 
       this.shadowRoot.getElementById('schedule-btn').addEventListener('click', () => this._navigate('/book-a-ride'));
+      initScrollReveals(this.shadowRoot);
     }
   }
 

@@ -1,5 +1,5 @@
 import { COMPANY_INFO, DRIVER_STANDARDS, IMAGES } from '../companyData';
-import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
+import { CCR_SHARED_CSS, ensureGoogleFonts, initScrollReveals, syncThemeHost } from './ccr-styles';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrSafetyPage extends HTMLElement {
@@ -104,8 +104,8 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               </div>
             </div>
 
-            <div class="card">
-              <img src="${IMAGES.wheelchairRampVan}" alt="Cloud Comfort Ride wheelchair accessible transit van with commercial ramp deployed" style="width:100%;height:340px;object-fit:cover;display:block;" />
+            <div class="card reveal">
+              <img src="${IMAGES.wheelchairRampVan}" alt="Cloud Comfort Ride wheelchair accessible transit van with commercial ramp deployed" style="width:100%;aspect-ratio:16/10;min-height:260px;object-fit:cover;object-position:center 22%;display:block;" />
               <div style="padding:24px;background:#061f46;color:#fff;border-top:2px solid #f3bf28;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap;">
                   <strong style="font-size:20px;">Certified Ramp &amp; Lift Operation</strong>
@@ -146,26 +146,26 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               <h2 style="font-size:clamp(28px,3.6vw,40px);font-weight:800;margin:10px 0;">ADA-Compliant Vans &amp; Comfort Sedans</h2>
               <p style="font-size:clamp(16px,1.25vw,18px);color:var(--muted);line-height:1.65;">Every vehicle undergoes daily pre-trip safety inspections, climate calibration, and hospital-grade sanitization.</p>
             </div>
-            <div class="standards-grid">
+            <div class="standards-grid reveal">
               <div class="std-card" style="padding:0;overflow:hidden;">
-                <img src="${IMAGES.wheelchairSeattleSkyline}" alt="ADA Wheelchair Accessible Van with hydraulic lift" style="width:100%;height:210px;object-fit:cover;display:block;" />
+                <img src="${IMAGES.wheelchairSeattleSkyline}" alt="ADA Wheelchair Accessible Van with hydraulic lift" style="width:100%;aspect-ratio:16/10;min-height:210px;object-fit:cover;object-position:center 22%;display:block;" />
                 <div style="padding:22px;">
                   <h3 style="font-size:21px;font-weight:800;margin-bottom:8px;">ADA Wheelchair Accessible Vans</h3>
-                  <p style="font-size:16px;color:var(--muted);line-height:1.6;">High-roof transit vans with commercial hydraulic lifts, gentle-grade ramps, and certified 4-point Q-Straint tie-downs.</p>
+                  <p style="font-size:17px;color:var(--ink);line-height:1.6;">High-roof transit vans with commercial hydraulic lifts, gentle-grade ramps, and certified 4-point Q-Straint tie-downs.</p>
                 </div>
               </div>
               <div class="std-card" style="padding:0;overflow:hidden;">
-                <img src="${IMAGES.clinicPickupSedan}" alt="Low-step comfort sedan for ambulatory medical transit" style="width:100%;height:210px;object-fit:cover;display:block;" />
+                <img src="${IMAGES.clinicPickupSedan}" alt="Low-step comfort sedan for ambulatory medical transit" style="width:100%;aspect-ratio:16/10;min-height:210px;object-fit:cover;object-position:center 22%;display:block;" />
                 <div style="padding:22px;">
                   <h3 style="font-size:21px;font-weight:800;margin-bottom:8px;">Ambulatory Sedans &amp; SUVs</h3>
-                  <p style="font-size:16px;color:var(--muted);line-height:1.6;">Low-step-in sedans and SUVs ideal for routine clinic visits, specialist consultations, and post-procedure discharges.</p>
+                  <p style="font-size:17px;color:var(--ink);line-height:1.6;">Low-step-in sedans and SUVs ideal for routine clinic visits, specialist consultations, and post-procedure discharges.</p>
                 </div>
               </div>
               <div class="std-card" style="padding:0;overflow:hidden;">
-                <img src="${IMAGES.cleanVanInterior}" alt="Spacious sanitized passenger van interior" style="width:100%;height:210px;object-fit:cover;display:block;" />
+                <img src="${IMAGES.cleanVanInterior}" alt="Spacious sanitized passenger van interior" style="width:100%;aspect-ratio:16/10;min-height:210px;object-fit:cover;object-position:center 35%;display:block;" />
                 <div style="padding:22px;">
                   <h3 style="font-size:21px;font-weight:800;margin-bottom:8px;">Spacious &amp; Sanitized Cabins</h3>
-                  <p style="font-size:16px;color:var(--muted);line-height:1.6;">Leather seating, dual-zone climate control, walker/rollator storage, and room for a family caregiver or health aide.</p>
+                  <p style="font-size:17px;color:var(--ink);line-height:1.6;">Leather seating, dual-zone climate control, walker/rollator storage, and room for a family caregiver or health aide.</p>
                 </div>
               </div>
             </div>
@@ -174,6 +174,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       `;
 
       this.shadowRoot.getElementById('book-safety').addEventListener('click', () => this._navigate('/book-a-ride'));
+      initScrollReveals(this.shadowRoot);
     }
   }
 

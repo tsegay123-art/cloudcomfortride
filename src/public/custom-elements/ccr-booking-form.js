@@ -217,29 +217,29 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               margin: 18px 0;
               display: grid;
               grid-template-columns: 1fr;
-              gap: 10px;
-              font-size: 13px;
+              gap: 14px;
+              font-size: 16px;
             }
             @media (min-width: 640px) {
               .summary-grid { grid-template-columns: 1fr 1fr; }
             }
-            .summary-grid span { color: var(--muted); display: block; font-size: 11px; text-transform: uppercase; font-weight: 700; }
+            .summary-grid span { color: var(--muted); display: block; font-size: 13px; text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
             .voucher-card {
               text-align: left;
               border: 2px solid #061f46;
               border-radius: 14px;
-              padding: 20px;
+              padding: 22px;
               background: #ffffff;
-              color: #122747;
+              color: #000000;
               margin-top: 18px;
             }
-            .voucher-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f3bf28; padding-bottom: 10px; margin-bottom: 14px; }
-            .voucher-eyebrow { font-size: 10px; text-transform: uppercase; font-weight: 800; color: #986800; }
-            .voucher-status { background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 800; }
-            .voucher-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; }
-            .voucher-grid span { display: block; color: #65758b; font-size: 10px; text-transform: uppercase; font-weight: 700; }
-            .voucher-notes { margin-top: 12px; font-size: 12px; background: #f7f9fc; padding: 10px; border-radius: 8px; }
-            .voucher-foot { margin-top: 14px; padding-top: 10px; border-top: 1px solid #dce4ee; font-size: 11px; color: #65758b; text-align: center; }
+            .voucher-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f3bf28; padding-bottom: 12px; margin-bottom: 16px; }
+            .voucher-eyebrow { font-size: 13px; text-transform: uppercase; font-weight: 800; color: #986800; }
+            .voucher-status { background: #fef3c7; color: #92400e; padding: 5px 12px; border-radius: 9999px; font-size: 13px; font-weight: 800; }
+            .voucher-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 15px; }
+            .voucher-grid span { display: block; color: #334155; font-size: 12px; text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
+            .voucher-notes { margin-top: 14px; font-size: 15px; background: #f7f9fc; padding: 12px; border-radius: 8px; }
+            .voucher-foot { margin-top: 14px; padding-top: 12px; border-top: 1px solid #dce4ee; font-size: 14px; color: #334155; text-align: center; }
           </style>
           <div class="success-card">
             <div class="success-icon">✓</div>

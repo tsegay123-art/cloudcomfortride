@@ -100,9 +100,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                   <a class="dt-button-outline" style="background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.3);" href="tel:${COMPANY_INFO.phoneRaw}">☎ Call Us: ${COMPANY_INFO.phoneDisplay}</a>
                 </div>
               </div>
-              <div style="border-radius:18px;overflow:hidden;border:2px solid rgba(255,255,255,0.2);">
-                <img src="${IMAGES.medicalCenterVanDoctor}" alt="Cloud Comfort Ride clean medical transport van" style="width:100%;height:260px;object-fit:cover;display:block;" />
-                <div style="padding:12px 16px;background:#041329;display:flex;justify-content:space-between;font-size:12px;">
+              <div style="border-radius:18px;overflow:hidden;border:2px solid rgba(255,255,255,0.22);">
+                <img src="${IMAGES.medicalCenterVanDoctor}" alt="Cloud Comfort Ride clean medical transport van" style="width:100%;aspect-ratio:16/10;min-height:240px;object-fit:cover;object-position:center 22%;display:block;" />
+                <div style="padding:14px 18px;background:#041329;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:15px;">
                   <strong>Seattle Medical Center Transit</strong>
                   <span style="color:#f3bf28;font-weight:700;">100% On-Time Protocol</span>
                 </div>

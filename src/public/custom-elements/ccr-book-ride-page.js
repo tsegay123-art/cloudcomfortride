@@ -1,5 +1,5 @@
 import { COMPANY_INFO, FAQS, IMAGES } from '../companyData';
-import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
+import { CCR_SHARED_CSS, ensureGoogleFonts, initScrollReveals, syncThemeHost } from './ccr-styles';
 import './ccr-booking-form';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
@@ -108,9 +108,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
             <aside class="sidebar">
               <div class="card">
-                <div style="position:relative;height:200px;">
-                  <img src="${IMAGES.driverSedanAssistance}" alt="Cloud Comfort Ride driver assisting passenger" style="width:100%;height:100%;object-fit:cover;display:block;" />
-                  <span style="position:absolute;bottom:12px;left:12px;padding:5px 12px;border-radius:9999px;background:rgba(6,31,70,0.9);color:#fff;font-size:11px;font-weight:700;border:1px solid rgba(243,191,40,0.5);">Door-Through-Door Care</span>
+                <div style="position:relative;aspect-ratio:16/10;min-height:200px;">
+                  <img src="${IMAGES.driverSedanAssistance}" alt="Cloud Comfort Ride driver assisting passenger" style="width:100%;height:100%;object-fit:cover;object-position:center 22%;display:block;" />
+                  <span style="position:absolute;bottom:12px;left:12px;padding:6px 14px;border-radius:9999px;background:rgba(6,31,70,0.92);color:#fff;font-size:14px;font-weight:700;border:1px solid rgba(243,191,40,0.55);">Door-Through-Door Care</span>
                 </div>
                 <div style="padding:24px;display:flex;flex-direction:column;gap:14px;">
                   <h3 style="font-size:21px;font-weight:800;">What to Expect with Cloud Comfort Ride</h3>
@@ -165,6 +165,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           this.render();
         });
       });
+      initScrollReveals(this.shadowRoot);
     }
   }
 

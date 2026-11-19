@@ -1,5 +1,5 @@
 import { COMPANY_INFO } from '../companyData';
-import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
+import { CCR_SHARED_CSS, ensureGoogleFonts, initScrollReveals, syncThemeHost } from './ccr-styles';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrLegalPage extends HTMLElement {
@@ -89,6 +89,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           </div>
         </section>
       `;
+      initScrollReveals(this.shadowRoot);
     }
   }
 
