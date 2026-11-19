@@ -62,26 +62,27 @@ export const CCR_SHARED_CSS = `
   }
 
   h1 {
-    font-size: clamp(34px, 4.6vw, 60px);
+    font-size: clamp(36px, 4.8vw, 62px);
     line-height: 1.08;
     font-weight: 800;
   }
 
   h2 {
-    font-size: clamp(28px, 3.6vw, 42px);
+    font-size: clamp(28px, 3.6vw, 44px);
     line-height: 1.15;
     font-weight: 800;
+    text-shadow: 0 2px 10px rgba(6, 31, 70, 0.08);
   }
 
   h3 {
-    font-size: clamp(20px, 2vw, 24px);
+    font-size: clamp(22px, 2.1vw, 26px);
     line-height: 1.25;
     font-weight: 800;
   }
 
   p {
     margin: 0;
-    font-size: clamp(16px, 1.2vw, 18px);
+    font-size: clamp(17px, 1.25vw, 19px);
     line-height: 1.65;
   }
 
@@ -119,25 +120,26 @@ export const CCR_SHARED_CSS = `
     align-items: center;
     justify-content: center;
     gap: 10px;
-    background: #061f46;
+    background: linear-gradient(180deg, #0b2d63 0%, #061f46 100%);
     color: #ffffff;
     border: 2px solid #f3bf28;
-    box-shadow: 0 4px 0 #c99308;
-    padding: 13px 24px;
-    border-radius: 10px;
+    box-shadow: 0 5px 0 #c99308, 0 10px 20px rgba(6, 31, 70, 0.18);
+    padding: 14px 26px;
+    border-radius: 12px;
     font-family: 'Manrope', sans-serif;
     font-weight: 700;
-    font-size: 16px;
-    min-height: 48px;
-    transition: transform 0.2s ease, background 0.2s ease;
+    font-size: clamp(16px, 1.1vw, 17px);
+    min-height: 52px;
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease, box-shadow 0.2s ease;
   }
   .dt-button:hover {
-    transform: translateY(-2px);
-    background: #123e77;
+    transform: translateY(-3px);
+    background: linear-gradient(180deg, #164b8f 0%, #123e77 100%);
+    box-shadow: 0 7px 0 #c99308, 0 14px 26px rgba(6, 31, 70, 0.24);
   }
   .dt-button:active {
     transform: translateY(2px);
-    box-shadow: 0 2px 0 #c99308;
+    box-shadow: 0 2px 0 #c99308, 0 4px 10px rgba(6, 31, 70, 0.16);
   }
 
   .dt-button-outline {
@@ -148,13 +150,14 @@ export const CCR_SHARED_CSS = `
     background: #ffffff;
     color: #061f46;
     border: 2px solid #061f46;
-    padding: 13px 22px;
-    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(6, 31, 70, 0.08);
+    padding: 14px 24px;
+    border-radius: 12px;
     font-family: 'Manrope', sans-serif;
     font-weight: 700;
-    font-size: 16px;
-    min-height: 48px;
-    transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+    font-size: clamp(16px, 1.1vw, 17px);
+    min-height: 52px;
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
   }
   .dt-button-outline:hover {
     transform: translateY(-2px);
@@ -221,25 +224,69 @@ export const CCR_SHARED_CSS = `
     50% { opacity: 0.4; }
   }
 
+  @keyframes ccrFadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes ccrFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .anim-enter {
+    animation: ccrFadeInUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .reveal {
+    transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1), transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .reveal.reveal-pending {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  .reveal.reveal-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
   .banner-hero {
-    background: #061f46;
+    background: linear-gradient(135deg, #041329 0%, #061f46 55%, #0c3268 100%);
     color: #ffffff;
-    padding: 64px 0;
-    border-bottom: 2px solid #f3bf28;
+    padding: 68px 0;
+    border-bottom: 3px solid #f3bf28;
     text-align: center;
     position: relative;
     overflow: hidden;
   }
+  .banner-hero::after {
+    content: '';
+    position: absolute;
+    width: 340px;
+    height: 340px;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(243, 191, 40, 0.14) 0%, transparent 70%);
+    top: -140px;
+    right: -80px;
+    pointer-events: none;
+    animation: ccrFloat 7s ease-in-out infinite;
+  }
   :host([data-theme="dark"]) .banner-hero {
-    background: #030d1a;
+    background: linear-gradient(135deg, #020b18 0%, #030d1a 60%, #061a38 100%);
   }
   .banner-hero h1 {
-    font-size: clamp(34px, 4.5vw, 54px);
+    font-size: clamp(34px, 4.6vw, 56px);
     font-weight: 800;
     color: #ffffff;
     margin: 16px 0 14px;
-    line-height: 1.1;
-    text-shadow: 0 2px 14px rgba(4, 19, 41, 0.45);
+    line-height: 1.08;
+    text-shadow: 0 4px 18px rgba(3, 13, 26, 0.55);
   }
   .banner-hero p {
     font-size: clamp(17px, 1.4vw, 19px);
@@ -252,11 +299,47 @@ export const CCR_SHARED_CSS = `
   .card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
-    border-radius: 16px;
-    box-shadow: 0 15px 40px rgba(16, 44, 77, 0.04);
+    border-radius: 18px;
+    box-shadow: 0 12px 32px rgba(6, 31, 70, 0.08), 0 2px 6px rgba(6, 31, 70, 0.04);
     overflow: hidden;
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease, border-color 0.28s ease;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 44px rgba(6, 31, 70, 0.14), 0 4px 12px rgba(6, 31, 70, 0.06);
+    border-color: #8ca5c5;
   }
 `;
+
+export function initScrollReveals(root) {
+  if (!root || typeof window === 'undefined') return;
+  const nodes = root.querySelectorAll('.reveal');
+  if (!nodes.length) return;
+  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced || typeof IntersectionObserver === 'undefined') {
+    nodes.forEach((n) => n.classList.add('reveal-visible'));
+    return;
+  }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.remove('reveal-pending');
+        entry.target.classList.add('reveal-visible');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -24px 0px' });
+
+  nodes.forEach((n) => {
+    const rect = n.getBoundingClientRect();
+    if (rect.top < window.innerHeight * 0.92) {
+      n.classList.add('reveal-visible');
+    } else {
+      n.classList.add('reveal-pending');
+      io.observe(n);
+    }
+  });
+}
 
 export function syncThemeHost(hostEl) {
   try {

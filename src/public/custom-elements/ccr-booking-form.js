@@ -295,86 +295,109 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .form-wrap {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
-            border-top: 4px solid #f3bf28;
-            border-radius: 20px;
-            padding: 24px;
+            border-top: 5px solid #f3bf28;
+            border-radius: 22px;
+            padding: 26px;
+            box-shadow: 0 18px 44px rgba(6, 31, 70, 0.09), 0 4px 12px rgba(6, 31, 70, 0.04);
           }
-          @media (min-width: 640px) { .form-wrap { padding: 32px; } }
+          @media (min-width: 640px) { .form-wrap { padding: 38px; } }
           .section-head {
             font-family: 'Manrope', sans-serif;
             font-weight: 800;
-            font-size: 19px;
+            font-size: clamp(22px, 2.2vw, 26px);
             color: #061f46;
-            margin: 24px 0 14px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--line);
+            margin: 30px 0 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--line);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
+          }
+          .step-num {
+            width: 34px;
+            height: 34px;
+            border-radius: 9999px;
+            background: #061f46;
+            color: #f3bf28;
+            font-size: 16px;
+            font-weight: 900;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 3px 8px rgba(6, 31, 70, 0.2);
           }
           :host([data-theme="dark"]) .section-head { color: #f3bf28; }
-          .grid-2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+          :host([data-theme="dark"]) .step-num { background: #f3bf28; color: #061f46; }
+          .grid-2 { display: grid; grid-template-columns: 1fr; gap: 18px; }
           @media (min-width: 640px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
-          .grid-3 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+          .grid-3 { display: grid; grid-template-columns: 1fr; gap: 18px; }
           @media (min-width: 640px) { .grid-3 { grid-template-columns: 1fr 1fr 1fr; } }
           label {
             display: block;
-            font-size: 15px;
+            font-size: clamp(16px, 1.1vw, 17px);
             font-weight: 700;
             color: var(--ink);
-            margin-bottom: 6px;
+            margin-bottom: 8px;
           }
           input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="time"], input[type="number"], select, textarea {
             width: 100%;
-            padding: 12px 14px;
-            border-radius: 10px;
+            padding: 14px 16px;
+            border-radius: 12px;
             border: 1.5px solid var(--card-border);
             background: var(--surface-alt);
             color: var(--ink);
-            font-size: 16px;
+            font-size: 17px;
             font-family: inherit;
-            min-height: 48px;
+            min-height: 56px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
           }
+          textarea { min-height: 110px; }
           input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #123e77;
-            box-shadow: 0 0 0 3px rgba(18, 62, 119, 0.14);
+            background: var(--surface);
+            box-shadow: 0 0 0 4px rgba(18, 62, 119, 0.16);
           }
           .trip-toggle {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 12px;
           }
           .trip-btn {
-            padding: 12px;
-            min-height: 48px;
-            border-radius: 10px;
+            padding: 14px 16px;
+            min-height: 56px;
+            border-radius: 12px;
             border: 1.5px solid var(--card-border);
             background: var(--surface-alt);
             color: var(--ink);
             font-weight: 700;
-            font-size: 15px;
+            font-size: 16px;
+            transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
           }
+          .trip-btn:hover { border-color: #123e77; }
           .trip-btn.active {
-            background: #061f46;
+            background: linear-gradient(180deg, #0b2d63 0%, #061f46 100%);
             color: #ffffff;
             border-color: #f3bf28;
+            box-shadow: 0 4px 12px rgba(6, 31, 70, 0.22);
           }
           .check-row {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px 14px;
-            min-height: 48px;
-            border-radius: 10px;
-            border: 1px solid var(--card-border);
+            gap: 12px;
+            padding: 14px 16px;
+            min-height: 56px;
+            border-radius: 12px;
+            border: 1.5px solid var(--card-border);
             background: var(--surface-alt);
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 600;
+            line-height: 1.4;
             cursor: pointer;
           }
-          .check-row input { width: 20px; height: 20px; min-height: auto; flex-shrink: 0; }
-          .err-msg { color: #dc2626; font-size: 14px; font-weight: 600; margin-top: 5px; }
+          .check-row input { width: 22px; height: 22px; min-height: auto; flex-shrink: 0; }
+          .err-msg { color: #dc2626; font-size: 15px; font-weight: 600; margin-top: 6px; }
           .hp-field { position: absolute; left: -9999px; opacity: 0; height: 0; width: 0; overflow: hidden; }
           .submit-bar {
             margin-top: 24px;
@@ -391,7 +414,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             <input type="text" id="b-website" tabindex="-1" autocomplete="off" />
           </div>
 
-          <div class="section-head" style="margin-top:0;">1. Service &amp; Schedule</div>
+          <div class="section-head" style="margin-top:0;"><span class="step-num">1</span> Service &amp; Schedule</div>
           <div class="grid-2">
             <div>
               <label for="serviceType">Select Medical Service *</label>
@@ -433,7 +456,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             ` : ''}
           </div>
 
-          <div class="section-head">2. Pickup &amp; Destination</div>
+          <div class="section-head"><span class="step-num">2</span> Pickup &amp; Destination</div>
           <div class="grid-2">
             <div>
               <label for="pickupAddress">Pickup Street Address *</label>
@@ -462,7 +485,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             </div>
           </div>
 
-          <div class="section-head">3. Passenger &amp; Mobility Details</div>
+          <div class="section-head"><span class="step-num">3</span> Passenger &amp; Mobility Details</div>
           <div class="grid-2">
             <div>
               <label for="firstName">First Name *</label>
@@ -525,10 +548,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           </div>
 
           <div class="submit-bar">
-            <button type="submit" class="dt-button" style="width:100%;font-size:17px;padding:15px 24px;min-height:52px;" ${this._isSubmitting ? 'disabled' : ''}>
+            <button type="submit" class="dt-button" style="width:100%;font-size:18px;padding:16px 26px;min-height:58px;" ${this._isSubmitting ? 'disabled' : ''}>
               ${this._isSubmitting ? 'Submitting to Seattle Dispatch...' : '📅 Request Medical Ride Confirmation →'}
             </button>
-            <p style="text-align:center;font-size:15px;color:var(--muted);">
+            <p style="text-align:center;font-size:16px;color:var(--muted);">
               Need immediate same-day dispatch? Call <strong><a href="tel:${COMPANY_INFO.phoneRaw}">${COMPANY_INFO.phoneDisplay}</a></strong>
             </p>
           </div>

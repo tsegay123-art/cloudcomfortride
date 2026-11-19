@@ -1,5 +1,5 @@
 import { COMPANY_INFO, IMAGES } from '../companyData';
-import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
+import { CCR_SHARED_CSS, ensureGoogleFonts, initScrollReveals, syncThemeHost } from './ccr-styles';
 import './ccr-booking-form';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
@@ -128,7 +128,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         {
           num: '05',
           icon: '⌂',
-          img: IMAGES.driverSedanAssistance,
+          img: IMAGES.wheelchairRampVan,
           title: 'Hospital Discharge',
           desc: 'Help arranging a ride home after a hospital stay, with assistance to your destination as agreed.',
           points: ['Rides home after a hospital stay', 'Destination assistance inside residence', 'Comfort-focused transportation'],
@@ -292,37 +292,61 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .grid-3 { display: grid; grid-template-columns: 1fr; gap: 22px; }
           @media (min-width: 768px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
           @media (min-width: 1024px) { .grid-3 { grid-template-columns: repeat(3, 1fr); } }
-          .card-img-wrap { position: relative; height: 180px; overflow: hidden; }
-          .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
-          .card:hover .card-img-wrap img { transform: scale(1.05); }
+          .card-img-wrap { position: relative; height: 220px; overflow: hidden; background: #0f172a; }
+          .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center 22%; transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1); display: block; }
+          .card:hover .card-img-wrap img { transform: scale(1.06); }
           .card-tag {
             position: absolute;
             top: 12px;
             left: 12px;
-            padding: 5px 10px;
+            padding: 6px 12px;
             border-radius: 8px;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 800;
-            background: rgba(6, 31, 70, 0.9);
+            background: rgba(6, 31, 70, 0.92);
             color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
           }
           .card-tag.gold { background: #f3bf28; color: #061f46; }
-          .card-body { padding: 22px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+          .card-body { padding: 24px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
           .card-btn {
             width: 100%;
-            min-height: 48px;
-            border-radius: 10px;
-            border: 1.5px solid #061f46;
+            min-height: 50px;
+            border-radius: 12px;
+            border: 2px solid #061f46;
             background: transparent;
             color: var(--ink);
             font-weight: 700;
             font-size: 16px;
+            transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
           }
-          .card-btn:hover { background: #061f46; color: #ffffff; }
+          .card-btn:hover { background: #061f46; color: #ffffff; transform: translateY(-2px); }
           :host([data-theme="dark"]) .card-btn { border-color: #334155; }
           :host([data-theme="dark"]) .card-btn:hover { background: #f3bf28; color: #061f46; border-color: #f3bf28; }
-          .svc-card { border-top: 3px solid #f3bf28; display: flex; flex-direction: column; justify-content: space-between; }
-          .svc-list { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 8px; font-size: 15px; color: var(--muted); line-height: 1.5; }
+          .svc-card { border-top: 4px solid #f3bf28; display: flex; flex-direction: column; justify-content: space-between; }
+          .svc-card:hover { transform: translateY(-6px); border-color: #f3bf28; }
+          .svc-list { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 10px; font-size: 16px; color: var(--muted); line-height: 1.55; }
+          .svc-cta-btn {
+            width: 100%;
+            min-height: 48px;
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: 1.5px solid var(--card-border);
+            background: var(--surface-alt);
+            color: var(--ink);
+            font-family: 'Manrope', sans-serif;
+            font-weight: 800;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+          }
+          .svc-cta-btn .arrow { transition: transform 0.2s ease; color: var(--gold-accent); font-size: 18px; }
+          .svc-card:hover .svc-cta-btn { background: #061f46; color: #ffffff; border-color: #061f46; }
+          .svc-card:hover .svc-cta-btn .arrow { color: #f3bf28; transform: translateX(4px); }
+          :host([data-theme="dark"]) .svc-card:hover .svc-cta-btn { background: #f3bf28; color: #061f46; border-color: #f3bf28; }
+          :host([data-theme="dark"]) .svc-card:hover .svc-cta-btn .arrow { color: #061f46; }
           .pillar { border-top: 1px solid var(--line); padding-top: 20px; }
           .pillar-icon {
             width: 44px;
@@ -362,7 +386,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             <div class="hero-overlay"></div>
           </div>
           <div class="container">
-            <div class="hero-content">
+            <div class="hero-content anim-enter">
               <div class="badge-pill"><span class="pulse-dot"></span> Serving Seattle &amp; Surrounding Washington</div>
               <h1>Every Ride. <br /><span style="color:#f3bf28;">More Comfort. More Care.</span></h1>
               <p class="hero-sub">
@@ -442,12 +466,12 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                       <span class="card-tag ${c.goldBadge ? 'gold' : ''}">${c.badge}</span>
                     </div>
                     <div class="card-body">
-                      <h3 style="font-size:21px;font-weight:800;">${c.title}</h3>
-                      <div style="font-size:14px;font-weight:700;color:#0284c7;">${c.sub}</div>
-                      <p style="font-size:16px;color:var(--muted);line-height:1.6;">${c.desc}</p>
+                      <h3 style="font-size:clamp(21px,1.9vw,25px);font-weight:800;">${c.title}</h3>
+                      <div style="font-size:16px;font-weight:700;color:#0369a1;">${c.sub}</div>
+                      <p style="font-size:17px;color:var(--muted);line-height:1.65;">${c.desc}</p>
                     </div>
                   </div>
-                  <div style="padding:0 22px 22px;">
+                  <div style="padding:0 24px 24px;">
                     <button class="card-btn" data-book="${c.service}">${c.cta}</button>
                   </div>
                 </div>
@@ -457,14 +481,14 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         </section>
 
         <!-- SERVICES -->
-        <section class="sec-alt" id="services">
+        <section class="sec-alt reveal" id="services">
           <div class="container">
-            <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:40px;">
+            <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:44px;">
               <div>
                 <span class="eyebrow"><span class="eyebrow-dot"></span> How we can help</span>
-                <h2 style="font-size:clamp(28px,3.8vw,42px);font-weight:800;margin-top:8px;">Transportation for <span style="color:var(--gold-accent);">real life.</span></h2>
+                <h2 style="font-size:clamp(28px,3.8vw,44px);font-weight:800;margin-top:8px;">Transportation for <span style="color:var(--gold-accent);">real life.</span></h2>
               </div>
-              <p style="font-size:17px;color:var(--muted);max-width:420px;line-height:1.6;">From important appointments to everyday destinations, explore the ride options available through Cloud Comfort Ride.</p>
+              <p style="font-size:clamp(17px,1.25vw,19px);color:var(--muted);max-width:440px;line-height:1.65;">From important appointments to everyday destinations, explore the ride options available through Cloud Comfort Ride.</p>
             </div>
 
             <div class="grid-3">
@@ -473,18 +497,19 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                   <div>
                     <div class="card-img-wrap"><img src="${s.img}" alt="${s.title}" loading="lazy" /></div>
                     <div class="card-body" style="position:relative;">
-                      <span style="position:absolute;right:20px;top:20px;font-size:14px;font-weight:800;color:#94a3b8;">${s.num}</span>
-                      <div style="width:44px;height:44px;border-radius:9999px;background:#eaf2ff;color:#123e77;border:2px solid #8ca5c5;display:flex;align-items:center;justify-content:center;font-size:19px;">${s.icon}</div>
-                      <h3 style="font-size:22px;font-weight:800;">${s.title}</h3>
-                      <p style="font-size:16px;color:var(--muted);line-height:1.6;">${s.desc}</p>
+                      <span style="position:absolute;right:22px;top:22px;font-size:15px;font-weight:800;color:#64748b;background:var(--surface-alt);padding:3px 10px;border-radius:9999px;border:1px solid var(--card-border);">${s.num}</span>
+                      <div style="width:48px;height:48px;border-radius:9999px;background:#eaf2ff;color:#123e77;border:2px solid #8ca5c5;display:flex;align-items:center;justify-content:center;font-size:20px;">${s.icon}</div>
+                      <h3 style="font-size:clamp(22px,2vw,26px);font-weight:800;">${s.title}</h3>
+                      <p style="font-size:17px;color:var(--muted);line-height:1.65;">${s.desc}</p>
                       <ul class="svc-list">
                         ${s.points.map((pt) => `<li><span style="color:#b88b23;font-weight:900;">✓</span> ${pt}</li>`).join('')}
                       </ul>
                     </div>
                   </div>
-                  <div style="padding:14px 22px;border-top:1px solid var(--line);">
-                    <button data-book="${s.service}" style="background:none;border:none;color:var(--ink);font-weight:800;font-size:16px;padding:8px 0;min-height:44px;">
-                      Book this ride →
+                  <div style="padding:0 24px 24px;">
+                    <button class="svc-cta-btn" data-book="${s.service}">
+                      <span>Book this ride</span>
+                      <span class="arrow">→</span>
                     </button>
                   </div>
                 </article>
@@ -494,7 +519,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         </section>
 
         <!-- ABOUT VALUES -->
-        <section class="sec">
+        <section class="sec reveal">
           <div class="container">
             <div style="max-width:680px;margin-bottom:36px;">
               <span class="eyebrow"><span class="eyebrow-dot"></span> A ride you can feel good about</span>
@@ -591,6 +616,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       this.shadowRoot.querySelectorAll('[data-book]').forEach((btn) => {
         btn.addEventListener('click', () => this._navigate('/book-a-ride', btn.getAttribute('data-book')));
       });
+      initScrollReveals(this.shadowRoot);
     }
   }
 

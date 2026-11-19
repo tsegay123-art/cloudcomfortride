@@ -1,6 +1,6 @@
 import { COMPANY_INFO } from '../companyData';
 import { INQUIRY_STORAGE_KEY, validateContactPayload } from '../bookingHelpers';
-import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
+import { CCR_SHARED_CSS, ensureGoogleFonts, initScrollReveals, syncThemeHost } from './ccr-styles';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrContactPage extends HTMLElement {
@@ -147,24 +147,33 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             flex-shrink: 0;
           }
           .form-card {
-            padding: 32px;
-            border-radius: 20px;
+            padding: 36px;
+            border-radius: 22px;
             background: var(--card-bg);
             border: 1px solid var(--card-border);
-            border-top: 4px solid #f3bf28;
+            border-top: 5px solid #f3bf28;
+            box-shadow: 0 18px 44px rgba(6, 31, 70, 0.09), 0 4px 12px rgba(6, 31, 70, 0.04);
           }
-          label { display: block; font-size: 15px; font-weight: 700; margin-bottom: 6px; color: var(--ink); }
+          label { display: block; font-size: clamp(16px, 1.1vw, 17px); font-weight: 700; margin-bottom: 8px; color: var(--ink); }
           input, select, textarea {
             width: 100%;
-            padding: 12px 14px;
-            border-radius: 10px;
+            padding: 14px 16px;
+            border-radius: 12px;
             border: 1.5px solid var(--card-border);
             background: var(--surface-alt);
             color: var(--ink);
-            font-size: 16px;
+            font-size: 17px;
             font-family: inherit;
-            min-height: 48px;
-            margin-bottom: 16px;
+            min-height: 56px;
+            margin-bottom: 18px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+          }
+          textarea { min-height: 120px; }
+          input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #123e77;
+            background: var(--surface);
+            box-shadow: 0 0 0 4px rgba(18, 62, 119, 0.16);
           }
           .hp-field { position: absolute; left: -9999px; opacity: 0; height: 0; width: 0; overflow: hidden; }
         </style>
@@ -241,7 +250,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                   </select>
                   <label for="c-message">Message *</label>
                   <textarea id="c-message" rows="4" placeholder="Tell us how we can assist with your transportation needs...">${this._state.message}</textarea>
-                  <button type="submit" class="dt-button" style="width:100%;" ${this._isSubmitting ? 'disabled' : ''}>
+                  <button type="submit" class="dt-button" style="width:100%;min-height:58px;font-size:18px;" ${this._isSubmitting ? 'disabled' : ''}>
                     ${this._isSubmitting ? 'Sending...' : 'Send Message to Dispatch →'}
                   </button>
                 </form>
@@ -261,6 +270,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           this.render();
         });
       }
+      initScrollReveals(this.shadowRoot);
     }
   }
 

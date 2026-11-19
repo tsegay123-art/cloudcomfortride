@@ -1,5 +1,5 @@
 import { COMPANY_INFO, IMAGES, SERVICES_DATA } from '../companyData';
-import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
+import { CCR_SHARED_CSS, ensureGoogleFonts, initScrollReveals, syncThemeHost } from './ccr-styles';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrServicesPage extends HTMLElement {
@@ -77,9 +77,11 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             border-radius: 20px;
             overflow: hidden;
             border: 2px solid var(--card-border);
-            height: 340px;
+            height: 350px;
+            box-shadow: 0 14px 36px rgba(6, 31, 70, 0.1);
           }
-          .svc-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+          .svc-img img { width: 100%; height: 100%; object-fit: cover; object-position: center 22%; display: block; transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+          .svc-row:hover .svc-img img { transform: scale(1.04); }
           .feat-list { list-style: none; padding: 0; margin: 16px 0; display: flex; flex-direction: column; gap: 10px; font-size: 16px; color: var(--ink); line-height: 1.55; }
         </style>
 
@@ -152,6 +154,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       this.shadowRoot.querySelectorAll('[data-book]').forEach((btn) => {
         btn.addEventListener('click', () => this._navigate('/book-a-ride', btn.getAttribute('data-book')));
       });
+      initScrollReveals(this.shadowRoot);
     }
   }
 
