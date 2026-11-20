@@ -11,9 +11,9 @@ const ROUTE_ALIASES = {
   '/about': { urls: ['/about', '/about-us'], names: ['about us', 'about'] },
   '/about-us': { urls: ['/about', '/about-us'], names: ['about us', 'about'] },
   '/services': { urls: ['/services'], names: ['services'] },
-  '/safety-drivers': { urls: ['/safety-drivers', '/why-cloud-medical', '/fleet'], names: ['why cloud medical', 'fleet', 'safety'] },
-  '/fleet': { urls: ['/safety-drivers', '/why-cloud-medical', '/fleet'], names: ['why cloud medical', 'fleet', 'safety'] },
-  '/why-cloud-medical': { urls: ['/safety-drivers', '/why-cloud-medical', '/fleet'], names: ['why cloud medical', 'fleet', 'safety'] },
+  '/safety-drivers': { urls: ['/safety-drivers', '/why-cloud-medical', '/why-cloud-comfort-ride', '/fleet'], names: ['why cloud comfort ride', 'why cloud medical', 'fleet', 'safety'] },
+  '/fleet': { urls: ['/safety-drivers', '/why-cloud-medical', '/why-cloud-comfort-ride', '/fleet'], names: ['why cloud comfort ride', 'why cloud medical', 'fleet', 'safety'] },
+  '/why-cloud-medical': { urls: ['/safety-drivers', '/why-cloud-medical', '/why-cloud-comfort-ride', '/fleet'], names: ['why cloud comfort ride', 'why cloud medical', 'fleet', 'safety'] },
   '/book-a-ride': { urls: ['/book-a-ride', '/book-online', '/booking'], names: ['book a ride', 'booking'] },
   '/book-online': { urls: ['/book-a-ride', '/book-online', '/booking'], names: ['book a ride', 'booking'] },
   '/my-bookings': { urls: ['/my-bookings', '/my-booking'], names: ['my bookings', 'my booking'] },
@@ -84,6 +84,45 @@ export function wireHeaderElement(selector, currentPath) {
   setElementAttribute(selector, 'current-path', currentPath);
   setElementAttribute(selector, 'route-map', JSON.stringify(buildRouteMap()));
   wireNavigationElement(selector);
+}
+
+export function wireAllMasterCustomElements(currentPath) {
+  const routeMapJson = JSON.stringify(buildRouteMap());
+  const wired = new Set();
+
+  const wireOne = (el) => {
+    if (!el || wired.has(el)) return;
+    wired.add(el);
+    if (typeof el.setAttribute === 'function') {
+      el.setAttribute('current-path', currentPath);
+      el.setAttribute('route-map', routeMapJson);
+    }
+    if (typeof el.on === 'function') {
+      el.on('navigate', (event) => {
+        const detail = (event && event.detail) || {};
+        if (detail.serviceId) {
+          session.setItem(SELECTED_SERVICE_KEY, detail.serviceId);
+        }
+        if (detail.path) {
+          wixLocationFrontend.to(resolveWixRoute(detail.path));
+        }
+      });
+    }
+  };
+
+  ['#ccrHeader', '#ccrFooter'].forEach((sel) => wireOne(getElement(sel)));
+  try {
+    const allCustom = /** @type {any} */ ($w('CustomElement'));
+    if (Array.isArray(allCustom)) {
+      allCustom.forEach(wireOne);
+    } else if (allCustom && typeof allCustom.forEach === 'function') {
+      allCustom.forEach(wireOne);
+    } else {
+      wireOne(allCustom);
+    }
+  } catch (e) {
+    // Ignore if selector is unavailable
+  }
 }
 
 export function wireLegalElement(selector, mode) {

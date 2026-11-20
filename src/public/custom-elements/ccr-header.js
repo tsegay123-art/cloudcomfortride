@@ -134,7 +134,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           }
           .strip-inner {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             align-items: center;
             justify-content: space-between;
             gap: 8px;
@@ -142,65 +142,79 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .strip-left {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-weight: 600;
+            gap: 10px;
+            font-weight: 700;
             color: var(--ink);
+            white-space: nowrap;
           }
           .strip-left a {
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            white-space: nowrap;
           }
           .strip-left a:hover { color: #123e77; }
           :host([data-theme="dark"]) .strip-left a:hover { color: #f3bf28; }
           .strip-right {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 13px;
+            gap: 6px;
+            font-size: 12px;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.04em;
             color: var(--muted);
+            white-space: nowrap;
           }
+          @media (min-width: 640px) { .strip-right { font-size: 13px; } }
           .nav-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            height: 78px;
+            gap: 10px;
+            min-height: 68px;
+            padding: 10px 0;
           }
           .brand {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             background: none;
             border: none;
             padding: 0;
             text-align: left;
+            min-width: 0;
           }
           .brand img {
-            height: 46px;
+            height: 36px;
             width: auto;
             object-fit: contain;
+            flex-shrink: 0;
+          }
+          @media (min-width: 640px) {
+            .brand { gap: 12px; }
+            .brand img { height: 46px; }
           }
           .brand-title {
             font-family: 'Manrope', sans-serif;
             font-weight: 900;
-            font-size: clamp(19px, 1.8vw, 23px);
+            font-size: clamp(16px, 4.3vw, 22px);
             color: #061f46;
-            line-height: 1.05;
+            line-height: 1.1;
             display: block;
+            white-space: nowrap;
           }
           :host([data-theme="dark"]) .brand-title { color: #ffffff; }
           .brand-sub {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
             color: #123e77;
             letter-spacing: 0.06em;
             text-transform: uppercase;
-            display: block;
-            margin-top: 4px;
+            display: none;
+            margin-top: 3px;
           }
+          @media (min-width: 520px) { .brand-sub { display: block; font-size: 12px; } }
           :host([data-theme="dark"]) .brand-sub { color: #f3bf28; }
           .desktop-nav {
             display: none;

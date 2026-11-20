@@ -172,15 +172,35 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .hero-overlay {
             position: absolute;
             inset: 0;
-            background: linear-gradient(90deg, #061f46 0%, rgba(6,31,70,0.95) 45%, rgba(6,31,70,0.45) 100%);
+            background: linear-gradient(180deg, rgba(6,31,70,0.88) 0%, rgba(6,31,70,0.72) 55%, rgba(6,31,70,0.92) 100%);
+          }
+          @media (min-width: 768px) {
+            .hero-overlay {
+              background: linear-gradient(90deg, #061f46 0%, rgba(6,31,70,0.95) 45%, rgba(6,31,70,0.4) 100%);
+            }
           }
           .hero-content {
             position: relative;
             z-index: 2;
-            padding: 64px 0 64px clamp(8px, 2.5vw, 36px);
+            padding: 44px 0;
             max-width: 640px;
             margin-right: auto;
             text-align: left;
+          }
+          @media (min-width: 768px) {
+            .hero-content {
+              padding: 64px 0 64px clamp(8px, 2.5vw, 36px);
+            }
+          }
+          .hero .badge-pill {
+            font-size: 12px;
+            padding: 6px 12px;
+          }
+          @media (min-width: 640px) {
+            .hero .badge-pill {
+              font-size: 14px;
+              padding: 7px 16px;
+            }
           }
           .hero h1 {
             font-size: clamp(34px, 4.8vw, 60px);
