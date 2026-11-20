@@ -56,6 +56,15 @@ function resolveWixRoute(requestedPath) {
   return clean;
 }
 
+function buildRouteMap() {
+  const keys = ['/', '/services', '/about', '/safety-drivers', '/book-a-ride', '/my-bookings', '/contact', '/privacy', '/terms', '/accessibility'];
+  const map = {};
+  keys.forEach((k) => {
+    map[k] = resolveWixRoute(k);
+  });
+  return map;
+}
+
 function getElement(selector) {
   try {
     return $w(selector);
@@ -73,6 +82,7 @@ export function setElementAttribute(selector, name, value) {
 
 export function wireHeaderElement(selector, currentPath) {
   setElementAttribute(selector, 'current-path', currentPath);
+  setElementAttribute(selector, 'route-map', JSON.stringify(buildRouteMap()));
   wireNavigationElement(selector);
 }
 

@@ -177,8 +177,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .hero-content {
             position: relative;
             z-index: 2;
-            padding: 56px 0;
-            max-width: 680px;
+            padding: 64px 0 64px clamp(8px, 2.5vw, 36px);
+            max-width: 640px;
+            margin-right: auto;
+            text-align: left;
           }
           .hero h1 {
             font-size: clamp(34px, 4.8vw, 60px);

@@ -109,9 +109,10 @@ export const CCR_SHARED_CSS = `
   }
 
   .container {
+    width: 100%;
     max-width: 1340px;
     margin: 0 auto;
-    padding: 0 18px;
+    padding: 0 20px;
   }
   @media (min-width: 640px) { .container { padding: 0 24px; } }
   @media (min-width: 1024px) { .container { padding: 0 32px; } }

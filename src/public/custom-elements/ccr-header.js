@@ -6,7 +6,7 @@ import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrHeader extends HTMLElement {
     static get observedAttributes() {
-      return ['current-path', 'booking-count'];
+      return ['current-path', 'booking-count', 'route-map'];
     }
 
     constructor() {
@@ -48,12 +48,20 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
     }
 
     _navigate(path) {
-      const targetPath = path || '/';
+      const requested = path || '/';
+      let routeMap = {};
+      try {
+        const rawMap = this.getAttribute('route-map');
+        if (rawMap) routeMap = JSON.parse(rawMap);
+      } catch (e) {
+        routeMap = {};
+      }
+      const targetPath = routeMap[requested] || requested;
       const prevHref = typeof window !== 'undefined' ? window.location.href : '';
       const currentAttr = this.getAttribute('current-path') || '/';
 
       this.dispatchEvent(new CustomEvent('navigate', {
-        detail: { path: targetPath },
+        detail: { path: requested },
         bubbles: true,
         composed: true
       }));
@@ -66,7 +74,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           if (window.location.href === prevHref && window.location.pathname !== targetPath) {
             window.location.assign(targetPath);
           }
-        }, 250);
+        }, 650);
       }
     }
 
