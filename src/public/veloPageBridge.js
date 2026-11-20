@@ -1,9 +1,60 @@
 import wixLocationFrontend from 'wix-location-frontend';
+import wixSiteFrontend from 'wix-site-frontend';
 import { session } from 'wix-storage-frontend';
 import { submitBooking, searchBookings, cancelBooking } from 'backend/bookingService.jsw';
 import { submitInquiry } from 'backend/contactService.jsw';
 
 export const SELECTED_SERVICE_KEY = 'ccr_selected_service';
+
+const ROUTE_ALIASES = {
+  '/': { urls: ['/'], names: ['home'] },
+  '/about': { urls: ['/about', '/about-us'], names: ['about us', 'about'] },
+  '/about-us': { urls: ['/about', '/about-us'], names: ['about us', 'about'] },
+  '/services': { urls: ['/services'], names: ['services'] },
+  '/safety-drivers': { urls: ['/safety-drivers', '/why-cloud-medical', '/fleet'], names: ['why cloud medical', 'fleet', 'safety'] },
+  '/fleet': { urls: ['/safety-drivers', '/why-cloud-medical', '/fleet'], names: ['why cloud medical', 'fleet', 'safety'] },
+  '/why-cloud-medical': { urls: ['/safety-drivers', '/why-cloud-medical', '/fleet'], names: ['why cloud medical', 'fleet', 'safety'] },
+  '/book-a-ride': { urls: ['/book-a-ride', '/book-online', '/booking'], names: ['book a ride', 'booking'] },
+  '/book-online': { urls: ['/book-a-ride', '/book-online', '/booking'], names: ['book a ride', 'booking'] },
+  '/my-bookings': { urls: ['/my-bookings', '/my-booking'], names: ['my bookings', 'my booking'] },
+  '/contact': { urls: ['/contact', '/contact-us'], names: ['contact'] },
+  '/privacy': { urls: ['/privacy', '/privacy-policy'], names: ['privacy policy', 'privacy'] },
+  '/terms': { urls: ['/terms', '/terms-of-service'], names: ['terms of service', 'terms'] },
+  '/accessibility': { urls: ['/accessibility', '/accessibility-statement'], names: ['accessibility statement', 'accessibility'] }
+};
+
+function resolveWixRoute(requestedPath) {
+  const clean = String(requestedPath || '/').split('?')[0].replace(/\/+$/, '') || '/';
+  try {
+    const structure = wixSiteFrontend.getSiteStructure();
+    const pages = (structure && Array.isArray(structure.pages)) ? structure.pages : [];
+    if (!pages.length) return clean;
+
+    const normUrl = (u) => `/${String(u || '').replace(/^\/+|\/+$/g, '')}`;
+    if (clean === '/') {
+      const home = pages.find((p) => p.isHomePage);
+      return home && home.url ? normUrl(home.url) : '/';
+    }
+
+    const exact = pages.find((p) => normUrl(p.url) === clean);
+    if (exact && exact.url) return normUrl(exact.url);
+
+    const rule = ROUTE_ALIASES[clean];
+    if (rule) {
+      const byAliasUrl = pages.find((p) => rule.urls.includes(normUrl(p.url)));
+      if (byAliasUrl && byAliasUrl.url) return normUrl(byAliasUrl.url);
+
+      const byName = pages.find((p) => {
+        const pname = String(p.name || '').toLowerCase();
+        return rule.names.some((n) => pname.includes(n));
+      });
+      if (byName && byName.url) return normUrl(byName.url);
+    }
+  } catch (e) {
+    // Fallback to requested path if site structure is unavailable
+  }
+  return clean;
+}
 
 function getElement(selector) {
   try {
@@ -38,7 +89,7 @@ export function wireNavigationElement(selector) {
       session.setItem(SELECTED_SERVICE_KEY, detail.serviceId);
     }
     if (detail.path) {
-      wixLocationFrontend.to(detail.path);
+      wixLocationFrontend.to(resolveWixRoute(detail.path));
     }
   });
 }

@@ -48,13 +48,26 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
     }
 
     _navigate(path) {
-      this._mobileOpen = false;
-      this.render();
+      const targetPath = path || '/';
+      const prevHref = typeof window !== 'undefined' ? window.location.href : '';
+      const currentAttr = this.getAttribute('current-path') || '/';
+
       this.dispatchEvent(new CustomEvent('navigate', {
-        detail: { path },
+        detail: { path: targetPath },
         bubbles: true,
         composed: true
       }));
+
+      this._mobileOpen = false;
+      this.render();
+
+      if (typeof window !== 'undefined' && targetPath !== currentAttr) {
+        setTimeout(() => {
+          if (window.location.href === prevHref && window.location.pathname !== targetPath) {
+            window.location.assign(targetPath);
+          }
+        }, 250);
+      }
     }
 
     _toggleTheme() {
@@ -79,9 +92,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         { label: 'Home', path: '/', aliases: ['/'] },
         { label: 'Services', path: '/services', aliases: ['/services'] },
         { label: 'About Us', path: '/about', aliases: ['/about', '/about-us'] },
-        { label: 'Fleet & Safety', path: '/safety-drivers', aliases: ['/safety-drivers', '/fleet'] },
-        { label: 'Contact', path: '/contact', aliases: ['/contact'] },
-        { label: 'My Bookings', path: '/my-bookings', aliases: ['/my-bookings'], badge: bookingCount > 0 ? bookingCount : null }
+        { label: 'Fleet & Safety', path: '/safety-drivers', aliases: ['/safety-drivers', '/why-cloud-medical', '/fleet'] },
+        { label: 'Contact', path: '/contact', aliases: ['/contact', '/contact-us'] },
+        { label: 'My Bookings', path: '/my-bookings', aliases: ['/my-bookings', '/my-booking'], badge: bookingCount > 0 ? bookingCount : null }
       ];
       const isLinkActive = (link) => link.aliases.includes(currentPath);
 
@@ -192,6 +205,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             .desktop-nav { display: flex; }
             .mobile-actions { display: none !important; }
           }
+          .nav-link, .mobile-link, .brand, .icon-btn, .book-pill {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+          }
           .nav-link {
             background: none;
             border: none;
@@ -257,6 +274,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             display: flex;
             flex-direction: column;
             gap: 8px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            position: relative;
+            z-index: 60;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
           }
           .mobile-link {
