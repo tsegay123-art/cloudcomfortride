@@ -2,7 +2,7 @@ import wixLocationFrontend from 'wix-location-frontend';
 import wixSiteFrontend from 'wix-site-frontend';
 import wixSeoFrontend from 'wix-seo-frontend';
 import { session } from 'wix-storage-frontend';
-import { submitBooking, searchBookings, cancelBooking } from 'backend/bookingService.jsw';
+import { submitBooking, searchBookings, cancelBooking, requestBookingConfirmation } from 'backend/bookingService.jsw';
 import { submitInquiry } from 'backend/contactService.jsw';
 import { COMPANY_INFO } from './companyData';
 
@@ -263,6 +263,32 @@ export async function wireMyBookingsElement(selector) {
         await cancelBooking(detail.bookingId);
       } catch (e) {
         // Local storage removal still proceeds in the custom element
+      }
+    }
+  });
+
+  el.on('searchBookings', async (event) => {
+    const detail = (event && event.detail) || {};
+    const q = String(detail.query || '').trim() || 'CCR-';
+    try {
+      const res = await searchBookings(q);
+      if (res && res.success && Array.isArray(res.items)) {
+        const activeItems = res.items.filter((item) => item.status !== 'cancelled');
+        el.setAttribute('server-bookings', JSON.stringify(activeItems));
+      }
+    } catch (e) {
+      // Local filtering remains active
+    }
+  });
+
+  el.on('requestConfirmation', async (event) => {
+    const detail = (event && event.detail) || {};
+    if (detail.bookingId) {
+      try {
+        await requestBookingConfirmation(detail.bookingId);
+        el.setAttribute('confirmation-requested', detail.bookingId);
+      } catch (e) {
+        // Ignore
       }
     }
   });

@@ -9,7 +9,7 @@ import { CCR_SHARED_CSS, dispatchCcrNavigation, ensureGoogleFonts, syncThemeHost
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrMyBookingsPage extends HTMLElement {
     static get observedAttributes() {
-      return ['server-bookings'];
+      return ['server-bookings', 'confirmation-requested'];
     }
 
     constructor() {
@@ -18,6 +18,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       this._search = '';
       this._bookings = [];
       this._voucherBooking = null;
+      this._confirmNotice = '';
       this._onThemeSync = () => syncThemeHost(this);
     }
 
@@ -29,6 +30,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         } catch (err) {
           // Ignore malformed server payload
         }
+      } else if (name === 'confirmation-requested' && newVal) {
+        this._confirmNotice = `Confirmation follow-up sent to Seattle dispatch for ${newVal}. Call (206) 327-4411 for immediate updates.`;
+        this.render();
       }
     }
 
@@ -169,9 +173,11 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         <section style="background:var(--surface-alt);padding:44px 0;min-height:480px;">
           <div class="container" style="max-width:960px;">
             <div class="toolbar">
-              <input class="search-input" id="search-box" type="text" placeholder="Search by booking ID, passenger name, or phone..." value="${this._search}" />
+              <input class="search-input" id="search-box" type="text" placeholder="Search by Booking ID (e.g. CCR-2026-...), name, or phone..." value="${this._search}" />
+              <button class="dt-button-outline" id="search-dispatch-btn" style="min-height:48px;">🔍 Search Dispatch</button>
               <button class="dt-button" id="new-ride-btn">+ Book Another Ride</button>
             </div>
+            ${this._confirmNotice ? `<div role="status" style="padding:14px 18px;border-radius:12px;background:#ecfdf5;border:1.5px solid #16a34a;color:#14532d;font-size:16px;font-weight:700;margin-bottom:18px;">✓ ${this._confirmNotice}</div>` : ''}
 
             ${filtered.length === 0 ? `
               <div class="card" style="padding:52px 24px;text-align:center;">
@@ -199,6 +205,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                     </div>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;">
                       <button class="dt-button" style="padding:10px 16px;font-size:15px;min-height:44px;" data-voucher="${bid}">🖨 Trip Voucher</button>
+                      <button class="dt-button-outline" style="padding:10px 14px;font-size:15px;min-height:44px;" data-confirm="${bid}">✓ Request Confirmation</button>
                       <button class="dt-button-outline" style="padding:10px 14px;font-size:15px;min-height:44px;" data-remove="${bid}">Remove</button>
                     </div>
                   </div>
@@ -236,10 +243,42 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           this._search = target ? target.value : '';
           this.render();
         });
+        searchBox.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            this.dispatchEvent(new CustomEvent('searchBookings', {
+              detail: { query: this._search },
+              bubbles: true,
+              composed: true
+            }));
+          }
+        });
+      }
+      const searchDispatchBtn = this.shadowRoot.getElementById('search-dispatch-btn');
+      if (searchDispatchBtn) {
+        searchDispatchBtn.addEventListener('click', () => {
+          this.dispatchEvent(new CustomEvent('searchBookings', {
+            detail: { query: this._search },
+            bubbles: true,
+            composed: true
+          }));
+        });
       }
       this.shadowRoot.getElementById('new-ride-btn').addEventListener('click', () => this._navigate('/book-a-ride'));
       const emptyBook = this.shadowRoot.getElementById('empty-book');
       if (emptyBook) emptyBook.addEventListener('click', () => this._navigate('/book-a-ride'));
+
+      this.shadowRoot.querySelectorAll('[data-confirm]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-confirm');
+          this._confirmNotice = `Confirmation follow-up requested for ${id}. Seattle dispatch will verify and contact you shortly.`;
+          this.dispatchEvent(new CustomEvent('requestConfirmation', {
+            detail: { bookingId: id },
+            bubbles: true,
+            composed: true
+          }));
+          this.render();
+        });
+      });
 
       this.shadowRoot.querySelectorAll('[data-voucher]').forEach((btn) => {
         btn.addEventListener('click', () => {

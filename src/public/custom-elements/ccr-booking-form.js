@@ -18,6 +18,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       this.attachShadow({ mode: 'open' });
       this._state = {
         serviceType: '',
+        vehiclePreference: 'best_match',
         tripType: 'round_trip',
         pickupDate: getTomorrowDateStr(),
         pickupTime: '09:00',
@@ -125,6 +126,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       this._state = {
         ...this._state,
         serviceType: val('serviceType'),
+        vehiclePreference: val('vehiclePreference') || 'best_match',
         pickupDate: val('pickupDate'),
         pickupTime: val('pickupTime'),
         returnTime: val('returnTime'),
@@ -252,8 +254,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           </style>
           <div class="success-card">
             <div class="success-icon">✓</div>
-            <h3 style="font-size:24px;font-weight:800;color:var(--ink);">Ride Request Received</h3>
-            <p style="font-size:14px;color:var(--muted);margin-top:6px;">Our Seattle dispatch team is reviewing your route and vehicle assignment.</p>
+            <h3 style="font-size:26px;font-weight:800;color:var(--ink);">Ride Request Received</h3>
+            <p style="font-size:16px;color:var(--ink);margin-top:8px;line-height:1.6;">
+              Our Seattle dispatch team has received your request and is confirming your vehicle assignment. Save your Booking ID below to search or request a confirmation update on <strong>My Bookings</strong>.
+            </p>
             <div class="ref-box">${b.id}</div>
             <div class="summary-grid">
               <div><span>Passenger</span><strong>${b.passengerName}</strong></div>
@@ -501,9 +505,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           </div>
 
           <div class="section-head" style="margin-top:0;"><span class="step-num">1</span> Service &amp; Schedule</div>
-          <div class="grid-2">
+          <div class="grid-3">
             <div>
-              <label for="serviceType">Select Medical Service *</label>
+              <label for="serviceType">Select Service &amp; Transportation Type *</label>
               <select id="serviceType">
                 ${BOOKING_SERVICE_OPTIONS.map((opt) => `
                   <option value="${opt.value}" ${opt.disabled ? 'disabled' : ''} ${s.serviceType === opt.value ? 'selected' : ''}>
@@ -512,6 +516,15 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                 `).join('')}
               </select>
               ${fieldErr('serviceType')}
+            </div>
+            <div>
+              <label for="vehiclePreference">Vehicle &amp; Ride Option</label>
+              <select id="vehiclePreference">
+                <option value="best_match" ${s.vehiclePreference === 'best_match' ? 'selected' : ''}>Best Match for Selected Service</option>
+                <option value="sedan_suv" ${s.vehiclePreference === 'sedan_suv' ? 'selected' : ''}>Comfort Sedan / SUV</option>
+                <option value="wheelchair_van" ${s.vehiclePreference === 'wheelchair_van' ? 'selected' : ''}>Wheelchair Accessible Van (Lift / Ramp)</option>
+                <option value="multi_passenger_van" ${s.vehiclePreference === 'multi_passenger_van' ? 'selected' : ''}>Multi-Passenger / School &amp; Group Van</option>
+              </select>
             </div>
             <div>
               <label>Trip Type *</label>
@@ -651,7 +664,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
           <div class="submit-bar">
             <button type="submit" class="dt-button" style="width:100%;font-size:18px;padding:16px 26px;min-height:58px;" ${this._isSubmitting ? 'disabled' : ''}>
-              ${this._isSubmitting ? 'Submitting to Seattle Dispatch...' : '📅 Request Medical Ride Confirmation →'}
+              ${this._isSubmitting ? 'Submitting to Seattle Dispatch...' : '📅 Request Ride Confirmation →'}
             </button>
             <p style="text-align:center;font-size:16px;color:var(--muted);">
               Need immediate same-day dispatch? Call <strong><a href="tel:${COMPANY_INFO.phoneRaw}">${COMPANY_INFO.phoneDisplay}</a></strong>
@@ -686,10 +699,17 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         });
       });
 
-      const updateMapFrame = (query) => {
+      const updateMapFrame = () => {
         const frame = /** @type {HTMLIFrameElement | null} */ (this.shadowRoot.getElementById('booking-map-frame'));
-        if (frame && query) {
-          frame.src = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
+        if (!frame) return;
+        const pEl = /** @type {HTMLInputElement | null} */ (this.shadowRoot.getElementById('pickupAddress'));
+        const dEl = /** @type {HTMLInputElement | null} */ (this.shadowRoot.getElementById('destinationAddress'));
+        const origin = (pEl ? pEl.value : this._state.pickupAddress || '').trim();
+        const dest = (dEl ? dEl.value : this._state.destinationAddress || '').trim();
+        if (origin && dest) {
+          frame.src = `https://maps.google.com/maps?saddr=${encodeURIComponent(origin)}&daddr=${encodeURIComponent(dest)}&output=embed`;
+        } else if (dest || origin) {
+          frame.src = `https://maps.google.com/maps?q=${encodeURIComponent(dest || origin)}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
         }
       };
 
@@ -727,7 +747,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                 this._state.pickupAddress = chosen.address;
               }
               listEl.classList.remove('open');
-              updateMapFrame(chosen.address);
+              updateMapFrame();
             });
           });
         };
