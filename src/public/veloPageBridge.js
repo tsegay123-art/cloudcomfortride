@@ -216,6 +216,29 @@ export function wireNavigationElement(selector) {
   });
 }
 
+export function wireHomeSeo(selector) {
+  const targets = resolveAllPageCustomElements(selector);
+  const seoHtml = `
+    <section>
+      <h1>Cloud Comfort Ride — Non-Emergency Medical Transportation Seattle</h1>
+      <p>Cloud Comfort Ride provides safe, reliable, and compassionate medical transportation Seattle, wheelchair transportation Seattle, and medical transport Seattle across King County.</p>
+      <ul>
+        <li>Non-emergency medical transportation</li>
+        <li>Wheelchair transportation Seattle with ADA lifts and ramps</li>
+        <li>Dialysis, physical therapy, hospital discharge, and senior rides</li>
+      </ul>
+      <p>Office: ${COMPANY_INFO.address} | Phone: ${COMPANY_INFO.phoneDisplay} | Email: ${COMPANY_INFO.email}</p>
+    </section>
+  `.trim();
+  targets.forEach((el) => {
+    try {
+      el.seoMarkup = seoHtml;
+    } catch (e) {
+      // Ignore if read-only in preview
+    }
+  });
+}
+
 export function wireBookingElement(selector) {
   const targets = resolveAllPageCustomElements(selector);
   if (!targets.length) return;
