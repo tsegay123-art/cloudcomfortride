@@ -34,6 +34,9 @@ export const CCR_SHARED_CSS = `
     font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
     color: var(--ink);
     background: var(--surface);
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
     display: block;
     box-sizing: border-box;
   }
@@ -111,12 +114,10 @@ export const CCR_SHARED_CSS = `
 
   .container {
     width: 100%;
-    max-width: 1340px;
+    max-width: 1320px;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0 clamp(24px, 4vw, 56px);
   }
-  @media (min-width: 640px) { .container { padding: 0 24px; } }
-  @media (min-width: 1024px) { .container { padding: 0 32px; } }
 
   .dt-button {
     display: inline-flex;
@@ -244,15 +245,15 @@ export const CCR_SHARED_CSS = `
   }
 
   .anim-enter {
-    animation: ccrFadeInUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: ccrFadeInUp 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .reveal {
-    transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1), transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1), transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .reveal.reveal-pending {
-    opacity: 0;
-    transform: translateY(18px);
+    opacity: 0.92;
+    transform: translateY(10px);
   }
   .reveal.reveal-visible {
     opacity: 1;
