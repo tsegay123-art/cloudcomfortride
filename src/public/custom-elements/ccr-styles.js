@@ -33,6 +33,7 @@ export const CCR_SHARED_CSS = `
     --card-border: #cbd5e1;
     font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
     color: var(--ink);
+    background: var(--surface);
     display: block;
     box-sizing: border-box;
   }
@@ -365,9 +366,13 @@ export function dispatchCcrNavigation(hostEl, path, serviceId = '') {
   }
 
   let routeMap = {};
+  let hasRouteMap = false;
   try {
     const rawMap = hostEl && typeof hostEl.getAttribute === 'function' ? hostEl.getAttribute('route-map') : '';
-    if (rawMap) routeMap = JSON.parse(rawMap);
+    if (rawMap) {
+      routeMap = JSON.parse(rawMap);
+      hasRouteMap = Object.keys(routeMap).length > 0;
+    }
   } catch (e) {
     routeMap = {};
   }
@@ -381,12 +386,12 @@ export function dispatchCcrNavigation(hostEl, path, serviceId = '') {
     composed: true
   }));
 
-  if (typeof window !== 'undefined' && targetPath && window.location.pathname !== targetPath) {
+  if (!hasRouteMap && typeof window !== 'undefined' && targetPath && window.location.pathname !== targetPath) {
     setTimeout(() => {
       if (window.location.href === prevHref && window.location.pathname !== targetPath) {
         window.location.assign(targetPath);
       }
-    }, 650);
+    }, 350);
   }
 }
 

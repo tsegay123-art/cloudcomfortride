@@ -357,9 +357,30 @@ export const TESTIMONIALS = [
 
 export const SEATTLE_MEDICAL_CENTERS = [
   { name: 'Swedish First Hill', address: '747 Broadway, Seattle, WA 98122' },
-  { name: 'UW Medical Center', address: '1959 NE Pacific St, Seattle, WA 98195' },
+  { name: 'Swedish Cherry Hill', address: '500 17th Ave, Seattle, WA 98122' },
+  { name: 'UW Medical Center - Montlake', address: '1959 NE Pacific St, Seattle, WA 98195' },
   { name: 'Harborview Medical Center', address: '325 9th Ave, Seattle, WA 98104' },
-  { name: 'Virginia Mason Medical Center', address: '1100 9th Ave, Seattle, WA 98101' }
+  { name: 'Virginia Mason Medical Center', address: '1100 9th Ave, Seattle, WA 98101' },
+  { name: 'Fred Hutch Cancer Center', address: '825 Eastlake Ave E, Seattle, WA 98109' },
+  { name: 'Seattle Children\'s Hospital', address: '4800 Sand Point Way NE, Seattle, WA 98105' },
+  { name: 'UW Medical Center - Northwest', address: '1550 N 115th St, Seattle, WA 98133' },
+  { name: 'Overlake Medical Center', address: '1035 116th Ave NE, Bellevue, WA 98004' },
+  { name: 'EvergreenHealth Medical Center', address: '12040 NE 128th St, Kirkland, WA 98034' },
+  { name: 'UW Medicine Valley Medical Center', address: '400 S 43rd St, Renton, WA 98055' },
+  { name: 'St. Anne Hospital (Highline)', address: '16251 Sylvester Rd SW, Burien, WA 98166' }
+];
+
+export const SEATTLE_PICKUP_AREAS = [
+  { name: 'Cloud Comfort Ride HQ (Yesler Way)', address: '1902 E Yesler Way Unit #4, Seattle, WA 98122' },
+  { name: 'Capitol Hill, Seattle', address: 'Capitol Hill, Seattle, WA 98102' },
+  { name: 'First Hill, Seattle', address: 'First Hill, Seattle, WA 98104' },
+  { name: 'Downtown Seattle', address: 'Downtown Seattle, WA 98101' },
+  { name: 'Northgate, Seattle', address: 'Northgate, Seattle, WA 98125' },
+  { name: 'West Seattle', address: 'West Seattle, Seattle, WA 98116' },
+  { name: 'Bellevue Downtown', address: 'Bellevue, WA 98004' },
+  { name: 'Shoreline, WA', address: 'Shoreline, WA 98133' },
+  { name: 'Renton, WA', address: 'Renton, WA 98055' },
+  { name: 'Burien, WA', address: 'Burien, WA 98166' }
 ];
 
 export const FAQS = [

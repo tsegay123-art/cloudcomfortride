@@ -50,6 +50,23 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
     }
 
     _navigate(path, serviceId = '') {
+      let routeMap = {};
+      try {
+        const rawMap = this.getAttribute('route-map');
+        if (rawMap) routeMap = JSON.parse(rawMap);
+      } catch (e) {
+        routeMap = {};
+      }
+      const mapped = routeMap[path] || path;
+      if ((path === '/book-a-ride' || path === '/book-online') && mapped.includes('#request')) {
+        if (serviceId) {
+          const form = this.shadowRoot && this.shadowRoot.getElementById('home-booking-form');
+          if (form) form.setAttribute('initial-service', serviceId);
+        }
+        const req = this.shadowRoot && this.shadowRoot.getElementById('request');
+        if (req) req.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
       dispatchCcrNavigation(this, path, serviceId);
     }
 

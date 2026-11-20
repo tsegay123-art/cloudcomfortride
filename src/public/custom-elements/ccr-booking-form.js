@@ -1,4 +1,4 @@
-import { BOOKING_SERVICE_OPTIONS, COMPANY_INFO, SEATTLE_MEDICAL_CENTERS, getServiceTitle } from '../companyData';
+import { BOOKING_SERVICE_OPTIONS, COMPANY_INFO, SEATTLE_MEDICAL_CENTERS, SEATTLE_PICKUP_AREAS, getServiceTitle } from '../companyData';
 import {
   buildVoucherMarkup,
   getTomorrowDateStr,
@@ -40,6 +40,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       this._errors = {};
       this._isSubmitting = false;
       this._submitTimer = null;
+      this._lookupTimer = null;
       this._completedBooking = null;
       this._showVoucher = false;
       this._onThemeSync = () => syncThemeHost(this);
@@ -443,6 +444,47 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             font-weight: 700;
           }
           .map-preview-btn:hover { background: #061f46; color: #ffffff; }
+          .ac-wrap { position: relative; }
+          .ac-list {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            z-index: 30;
+            background: var(--surface);
+            border: 1.5px solid #123e77;
+            border-radius: 12px;
+            box-shadow: 0 14px 32px rgba(6, 31, 70, 0.18);
+            max-height: 240px;
+            overflow-y: auto;
+            display: none;
+          }
+          .ac-list.open { display: block; }
+          .ac-item {
+            width: 100%;
+            text-align: left;
+            padding: 11px 14px;
+            background: none;
+            border: none;
+            border-bottom: 1px solid var(--line);
+            color: var(--ink);
+            font-size: 15px;
+            line-height: 1.4;
+          }
+          .ac-item:last-child { border-bottom: none; }
+          .ac-item:hover { background: #eaf2ff; color: #061f46; }
+          .ac-item strong { display: block; font-size: 15px; }
+          .ac-item span { font-size: 13px; color: #334155; }
+          :host([data-theme="dark"]) .ac-item:hover { background: #1e293b; color: #f3bf28; }
+          :host([data-theme="dark"]) .ac-item span { color: #cbd5e1; }
+          .inline-map-box {
+            margin-top: 14px;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1.5px solid var(--card-border);
+            background: var(--surface-alt);
+          }
+          .inline-map-box iframe { width: 100%; height: 220px; border: 0; display: block; }
           .submit-bar {
             margin-top: 24px;
             display: flex;
@@ -502,9 +544,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
           <div class="section-head"><span class="step-num">2</span> Pickup &amp; Destination</div>
           <div class="grid-2">
-            <div>
+            <div class="ac-wrap">
               <label for="pickupAddress">Pickup Street Address *</label>
-              <input type="text" id="pickupAddress" placeholder="e.g., 1902 E Yesler Way, Seattle, WA" value="${s.pickupAddress}" />
+              <input type="text" id="pickupAddress" autocomplete="off" placeholder="e.g., 1902 E Yesler Way, Seattle, WA" value="${s.pickupAddress}" />
+              <div class="ac-list" id="pickup-ac" role="listbox" aria-label="Pickup address suggestions"></div>
               ${fieldErr('pickupAddress')}
             </div>
             <div>
@@ -518,9 +561,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               <label for="facilityName">Medical Facility / Clinic Name</label>
               <input type="text" id="facilityName" placeholder="e.g., Swedish First Hill, UW Medical" value="${s.facilityName}" />
             </div>
-            <div>
+            <div class="ac-wrap">
               <label for="destinationAddress">Destination Address *</label>
-              <input type="text" id="destinationAddress" placeholder="Clinic street address" value="${s.destinationAddress}" />
+              <input type="text" id="destinationAddress" autocomplete="off" placeholder="Clinic street address" value="${s.destinationAddress}" />
+              <div class="ac-list" id="dest-ac" role="listbox" aria-label="Destination address suggestions"></div>
               ${fieldErr('destinationAddress')}
             </div>
             <div>
@@ -530,9 +574,18 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           </div>
           <div class="quick-facilities">
             <span style="font-size:14px;font-weight:700;color:var(--ink);">Quick-Fill Hospital:</span>
-            ${SEATTLE_MEDICAL_CENTERS.map((c, idx) => `<button type="button" class="fac-chip" data-facility="${idx}">${c.name}</button>`).join('')}
+            ${SEATTLE_MEDICAL_CENTERS.slice(0, 6).map((c, idx) => `<button type="button" class="fac-chip" data-facility="${idx}">${c.name}</button>`).join('')}
           </div>
-          <button type="button" class="map-preview-btn" id="preview-route-map">📍 Preview Pickup / Destination Route on Google Maps ↗</button>
+          <div class="inline-map-box">
+            <iframe
+              id="booking-map-frame"
+              title="Pickup and Destination Map Preview"
+              src="${s.destinationAddress ? `https://maps.google.com/maps?q=${encodeURIComponent(s.destinationAddress)}&t=&z=13&ie=UTF8&iwloc=&output=embed` : COMPANY_INFO.mapsEmbedUrl}"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade">
+            </iframe>
+          </div>
+          <button type="button" class="map-preview-btn" id="preview-route-map">📍 Open Full Route &amp; Directions in Google Maps ↗</button>
 
           <div class="section-head"><span class="step-num">3</span> Passenger &amp; Mobility Details</div>
           <div class="grid-2">
@@ -632,6 +685,91 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           }
         });
       });
+
+      const updateMapFrame = (query) => {
+        const frame = /** @type {HTMLIFrameElement | null} */ (this.shadowRoot.getElementById('booking-map-frame'));
+        if (frame && query) {
+          frame.src = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
+        }
+      };
+
+      const bindAutocomplete = (inputId, listId, localPool, isDest) => {
+        const inputEl = /** @type {HTMLInputElement | null} */ (this.shadowRoot.getElementById(inputId));
+        const listEl = this.shadowRoot.getElementById(listId);
+        if (!inputEl || !listEl) return;
+
+        const renderOptions = (items) => {
+          if (!items.length) {
+            listEl.classList.remove('open');
+            listEl.innerHTML = '';
+            return;
+          }
+          listEl.innerHTML = items.map((item, idx) => `
+            <button type="button" class="ac-item" data-idx="${idx}">
+              <strong>${item.name}</strong>
+              <span>${item.address}</span>
+            </button>
+          `).join('');
+          listEl.classList.add('open');
+          listEl.querySelectorAll('.ac-item').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const chosen = items[Number(btn.getAttribute('data-idx'))];
+              if (!chosen) return;
+              inputEl.value = chosen.address;
+              if (isDest) {
+                this._state.destinationAddress = chosen.address;
+                const facEl = /** @type {HTMLInputElement | null} */ (this.shadowRoot.getElementById('facilityName'));
+                if (facEl && chosen.isFacility !== false) {
+                  facEl.value = chosen.name;
+                  this._state.facilityName = chosen.name;
+                }
+              } else {
+                this._state.pickupAddress = chosen.address;
+              }
+              listEl.classList.remove('open');
+              updateMapFrame(chosen.address);
+            });
+          });
+        };
+
+        const runSearch = (q) => {
+          const term = q.trim().toLowerCase();
+          const localMatches = localPool.filter((p) => (
+            !term || p.name.toLowerCase().includes(term) || p.address.toLowerCase().includes(term)
+          )).slice(0, 5);
+          renderOptions(localMatches);
+
+          if (term.length >= 3 && typeof fetch === 'function') {
+            if (this._lookupTimer) clearTimeout(this._lookupTimer);
+            this._lookupTimer = setTimeout(async () => {
+              try {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=us&viewbox=-122.6,47.85,-122.0,47.35&bounded=1&limit=4&q=${encodeURIComponent(q)}`;
+                const resp = await fetch(url, { headers: { Accept: 'application/json' } });
+                if (!resp.ok) return;
+                const rows = await resp.json();
+                if (!Array.isArray(rows) || !rows.length) return;
+                const remoteItems = rows.map((r) => ({
+                  name: (r.display_name || '').split(',')[0] || 'Seattle Location',
+                  address: r.display_name,
+                  isFacility: false
+                }));
+                renderOptions([...localMatches.slice(0, 3), ...remoteItems]);
+              } catch (err) {
+                // Local Seattle/King County recommendations remain available
+              }
+            }, 320);
+          }
+        };
+
+        inputEl.addEventListener('focus', () => runSearch(inputEl.value));
+        inputEl.addEventListener('input', () => runSearch(inputEl.value));
+        inputEl.addEventListener('blur', () => {
+          setTimeout(() => listEl.classList.remove('open'), 180);
+        });
+      };
+
+      bindAutocomplete('pickupAddress', 'pickup-ac', SEATTLE_PICKUP_AREAS, false);
+      bindAutocomplete('destinationAddress', 'dest-ac', SEATTLE_MEDICAL_CENTERS, true);
       const routeBtn = this.shadowRoot.getElementById('preview-route-map');
       if (routeBtn) {
         routeBtn.addEventListener('click', () => {

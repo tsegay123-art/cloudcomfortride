@@ -50,9 +50,13 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
     _navigate(path) {
       const requested = path || '/';
       let routeMap = {};
+      let hasRouteMap = false;
       try {
         const rawMap = this.getAttribute('route-map');
-        if (rawMap) routeMap = JSON.parse(rawMap);
+        if (rawMap) {
+          routeMap = JSON.parse(rawMap);
+          hasRouteMap = Object.keys(routeMap).length > 0;
+        }
       } catch (e) {
         routeMap = {};
       }
@@ -69,12 +73,12 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       this._mobileOpen = false;
       this.render();
 
-      if (typeof window !== 'undefined' && targetPath !== currentAttr) {
+      if (!hasRouteMap && typeof window !== 'undefined' && targetPath !== currentAttr) {
         setTimeout(() => {
           if (window.location.href === prevHref && window.location.pathname !== targetPath) {
             window.location.assign(targetPath);
           }
-        }, 650);
+        }, 350);
       }
     }
 
