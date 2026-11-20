@@ -135,6 +135,20 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                   ☎ ${COMPANY_INFO.phoneDisplay}
                 </a>
               </div>
+
+              <div class="card" style="overflow:hidden;">
+                <iframe
+                  title="Cloud Comfort Ride Seattle Service Area Map"
+                  src="${COMPANY_INFO.mapsEmbedUrl}"
+                  style="width:100%;height:220px;border:0;display:block;"
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade">
+                </iframe>
+                <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <span style="font-size:15px;font-weight:700;">1902 E Yesler Way Unit #4</span>
+                  <a href="${COMPANY_INFO.mapsUrl}" target="_blank" rel="noopener noreferrer" style="font-size:15px;font-weight:800;color:#123e77;text-decoration:underline;">Open Map ↗</a>
+                </div>
+              </div>
             </aside>
           </div>
         </section>

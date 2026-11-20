@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { COMPANY_INFO, IMAGES } from '../companyData';
-import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
+import { CCR_SHARED_CSS, dispatchCcrNavigation, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrFooter extends HTMLElement {
@@ -22,11 +22,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
     }
 
     _navigate(path) {
-      this.dispatchEvent(new CustomEvent('navigate', {
-        detail: { path },
-        bubbles: true,
-        composed: true
-      }));
+      dispatchCcrNavigation(this, path);
     }
 
     render() {

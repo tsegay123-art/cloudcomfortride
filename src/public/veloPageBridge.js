@@ -1,8 +1,10 @@
 import wixLocationFrontend from 'wix-location-frontend';
 import wixSiteFrontend from 'wix-site-frontend';
+import wixSeoFrontend from 'wix-seo-frontend';
 import { session } from 'wix-storage-frontend';
 import { submitBooking, searchBookings, cancelBooking } from 'backend/bookingService.jsw';
 import { submitInquiry } from 'backend/contactService.jsw';
+import { COMPANY_INFO } from './companyData';
 
 export const SELECTED_SERVICE_KEY = 'ccr_selected_service';
 
@@ -14,8 +16,8 @@ const ROUTE_ALIASES = {
   '/safety-drivers': { urls: ['/safety-drivers', '/why-cloud-medical', '/why-cloud-comfort-ride', '/fleet'], names: ['why cloud comfort ride', 'why cloud medical', 'fleet', 'safety'] },
   '/fleet': { urls: ['/safety-drivers', '/why-cloud-medical', '/why-cloud-comfort-ride', '/fleet'], names: ['why cloud comfort ride', 'why cloud medical', 'fleet', 'safety'] },
   '/why-cloud-medical': { urls: ['/safety-drivers', '/why-cloud-medical', '/why-cloud-comfort-ride', '/fleet'], names: ['why cloud comfort ride', 'why cloud medical', 'fleet', 'safety'] },
-  '/book-a-ride': { urls: ['/book-a-ride', '/book-online', '/booking'], names: ['book a ride', 'booking'] },
-  '/book-online': { urls: ['/book-a-ride', '/book-online', '/booking'], names: ['book a ride', 'booking'] },
+  '/book-a-ride': { urls: ['/book-a-ride', '/book-online', '/book-ride'], names: ['book a ride', 'book online', 'book ride', 'schedule'] },
+  '/book-online': { urls: ['/book-a-ride', '/book-online', '/book-ride'], names: ['book a ride', 'book online', 'book ride', 'schedule'] },
   '/my-bookings': { urls: ['/my-bookings', '/my-booking'], names: ['my bookings', 'my booking'] },
   '/contact': { urls: ['/contact', '/contact-us'], names: ['contact'] },
   '/privacy': { urls: ['/privacy', '/privacy-policy'], names: ['privacy policy', 'privacy'] },
@@ -46,9 +48,18 @@ function resolveWixRoute(requestedPath) {
 
       const byName = pages.find((p) => {
         const pname = String(p.name || '').toLowerCase();
+        if ((clean === '/book-a-ride' || clean === '/book-online') && pname.includes('my booking')) {
+          return false;
+        }
         return rule.names.some((n) => pname.includes(n));
       });
       if (byName && byName.url) return normUrl(byName.url);
+    }
+
+    if (clean === '/book-a-ride' || clean === '/book-online') {
+      const home = pages.find((p) => p.isHomePage);
+      const homeUrl = home && home.url ? normUrl(home.url) : '/';
+      return `${homeUrl}?book=1#request`;
     }
   } catch (e) {
     // Fallback to requested path if site structure is unavailable
@@ -73,8 +84,54 @@ function getElement(selector) {
   }
 }
 
+function resolveElementOrFallback(selector) {
+  const direct = getElement(selector);
+  if (direct && typeof /** @type {any} */ (direct).on === 'function') {
+    return direct;
+  }
+  try {
+    const all = /** @type {any} */ ($w('CustomElement'));
+    if (Array.isArray(all) && all.length) {
+      return all.find((item) => item && item.id !== 'ccrHeader' && item.id !== 'ccrFooter') || all[0];
+    }
+    if (all && typeof all.on === 'function') return all;
+  } catch (e) {
+    // Ignore
+  }
+  return direct;
+}
+
+export function applyBusinessSeo() {
+  try {
+    wixSeoFrontend.setStructuredData([
+      {
+        '@context': 'https://schema.org',
+        '@type': 'MedicalBusiness',
+        name: COMPANY_INFO.brandName,
+        alternateName: 'Cloud Medical Transportation',
+        url: COMPANY_INFO.website,
+        sameAs: [COMPANY_INFO.legacyWebsite],
+        telephone: COMPANY_INFO.phoneRaw,
+        email: COMPANY_INFO.email,
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: '1902 E Yesler Way Unit #4',
+          addressLocality: 'Seattle',
+          addressRegion: 'WA',
+          postalCode: '98122',
+          addressCountry: 'US'
+        },
+        areaServed: COMPANY_INFO.serviceAreas,
+        openingHours: 'Mo-Su 06:00-20:00'
+      }
+    ]);
+  } catch (e) {
+    // Ignore if SEO API is unavailable in preview
+  }
+}
+
 export function setElementAttribute(selector, name, value) {
-  const el = /** @type {any} */ (getElement(selector));
+  const el = /** @type {any} */ (resolveElementOrFallback(selector));
   if (el && typeof el.setAttribute === 'function') {
     el.setAttribute(name, value);
   }
@@ -87,6 +144,7 @@ export function wireHeaderElement(selector, currentPath) {
 }
 
 export function wireAllMasterCustomElements(currentPath) {
+  applyBusinessSeo();
   const routeMapJson = JSON.stringify(buildRouteMap());
   const wired = new Set();
 
@@ -130,8 +188,11 @@ export function wireLegalElement(selector, mode) {
 }
 
 export function wireNavigationElement(selector) {
-  const el = /** @type {any} */ (getElement(selector));
+  const el = /** @type {any} */ (resolveElementOrFallback(selector));
   if (!el || typeof el.on !== 'function') return;
+  if (typeof el.setAttribute === 'function') {
+    el.setAttribute('route-map', JSON.stringify(buildRouteMap()));
+  }
   el.on('navigate', (event) => {
     const detail = (event && event.detail) || {};
     if (detail.serviceId) {
@@ -144,7 +205,7 @@ export function wireNavigationElement(selector) {
 }
 
 export function wireBookingElement(selector) {
-  const el = /** @type {any} */ (getElement(selector));
+  const el = /** @type {any} */ (resolveElementOrFallback(selector));
   if (!el || typeof el.on !== 'function') return;
 
   const preselected = session.getItem(SELECTED_SERVICE_KEY);
@@ -158,40 +219,40 @@ export function wireBookingElement(selector) {
     try {
       const result = await submitBooking(detail.payload);
       if (result && result.success && result.booking) {
-        setElementAttribute(selector, 'booking-error', '');
-        setElementAttribute(selector, 'booking-result', JSON.stringify(result.booking));
+        el.setAttribute('booking-error', '');
+        el.setAttribute('booking-result', JSON.stringify(result.booking));
       } else {
         const msg = (result && result.message) || 'Please check your booking details.';
-        setElementAttribute(selector, 'booking-error', msg);
+        el.setAttribute('booking-error', msg);
       }
     } catch (err) {
-      setElementAttribute(selector, 'booking-error', 'Unable to reach dispatch server. Please call (206) 327-4411.');
+      el.setAttribute('booking-error', 'Unable to reach dispatch server. Please call (206) 327-4411.');
     }
   });
 }
 
 export function wireContactElement(selector) {
-  const el = /** @type {any} */ (getElement(selector));
+  const el = /** @type {any} */ (resolveElementOrFallback(selector));
   if (!el || typeof el.on !== 'function') return;
   el.on('submitContact', async (event) => {
     const detail = (event && event.detail) || {};
     try {
       const result = await submitInquiry(detail.payload);
       if (result && result.success) {
-        setElementAttribute(selector, 'contact-error', '');
-        setElementAttribute(selector, 'contact-result', JSON.stringify(result.inquiry || { ok: true }));
+        el.setAttribute('contact-error', '');
+        el.setAttribute('contact-result', JSON.stringify(result.inquiry || { ok: true }));
       } else {
         const msg = (result && result.message) || 'Please check your inquiry details.';
-        setElementAttribute(selector, 'contact-error', msg);
+        el.setAttribute('contact-error', msg);
       }
     } catch (err) {
-      setElementAttribute(selector, 'contact-error', 'Failed to send message. Please call (206) 327-4411.');
+      el.setAttribute('contact-error', 'Failed to send message. Please call (206) 327-4411.');
     }
   });
 }
 
 export async function wireMyBookingsElement(selector) {
-  const el = /** @type {any} */ (getElement(selector));
+  const el = /** @type {any} */ (resolveElementOrFallback(selector));
   if (!el || typeof el.on !== 'function') return;
   wireNavigationElement(selector);
 
@@ -210,7 +271,7 @@ export async function wireMyBookingsElement(selector) {
     const res = await searchBookings('CCR-');
     if (res && res.success && Array.isArray(res.items)) {
       const activeItems = res.items.filter((item) => item.status !== 'cancelled');
-      setElementAttribute(selector, 'server-bookings', JSON.stringify(activeItems));
+      el.setAttribute('server-bookings', JSON.stringify(activeItems));
     }
   } catch (e) {
     // Local storage fallback handled inside custom element

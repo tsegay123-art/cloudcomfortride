@@ -29,6 +29,9 @@ export const COMPANY_INFO = {
   locationCity: 'Seattle, WA',
   address: '1902 E Yesler Way Unit #4, Seattle, WA 98122',
   mapsUrl: 'https://www.google.com/maps/search/?api=1&query=1902+E+Yesler+Way+Unit+4+Seattle+WA+98122',
+  mapsEmbedUrl: 'https://maps.google.com/maps?q=1902+E+Yesler+Way+Unit+4+Seattle+WA+98122&t=&z=14&ie=UTF8&iwloc=&output=embed',
+  website: 'https://www.cloudcomfortride.com',
+  legacyWebsite: 'https://www.cloudmedicaltrans.com',
   phone: '+1 (206) 327-4411',
   phoneRaw: '+12063274411',
   phoneDisplay: '(206) 327-4411',
@@ -350,6 +353,13 @@ export const TESTIMONIALS = [
     serviceUsed: 'Hospital Discharge Transit',
     rating: 5
   }
+];
+
+export const SEATTLE_MEDICAL_CENTERS = [
+  { name: 'Swedish First Hill', address: '747 Broadway, Seattle, WA 98122' },
+  { name: 'UW Medical Center', address: '1959 NE Pacific St, Seattle, WA 98195' },
+  { name: 'Harborview Medical Center', address: '325 9th Ave, Seattle, WA 98104' },
+  { name: 'Virginia Mason Medical Center', address: '1100 9th Ave, Seattle, WA 98101' }
 ];
 
 export const FAQS = [

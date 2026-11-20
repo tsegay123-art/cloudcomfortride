@@ -266,6 +266,37 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             </div>
           </div>
         </section>
+
+        <section style="background:var(--surface-alt);padding:56px 0;border-top:1px solid var(--line);">
+          <div class="container">
+            <div class="card" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));overflow:hidden;border:2px solid var(--card-border);">
+              <div style="padding:32px;display:flex;flex-direction:column;justify-content:center;gap:14px;">
+                <span class="eyebrow"><span class="eyebrow-dot"></span> Google Maps &amp; Coverage</span>
+                <h2 style="font-size:clamp(24px,2.6vw,32px);font-weight:800;">Visit or Coordinate With Our Seattle Office</h2>
+                <p style="font-size:17px;color:var(--ink);line-height:1.65;">
+                  <strong>Address:</strong> ${COMPANY_INFO.address}<br />
+                  <strong>Phone:</strong> <a href="tel:${COMPANY_INFO.phoneRaw}" style="text-decoration:underline;">${COMPANY_INFO.phoneDisplay}</a><br />
+                  <strong>Email:</strong> <a href="mailto:${COMPANY_INFO.email}" style="text-decoration:underline;">${COMPANY_INFO.email}</a>
+                </p>
+                <div style="font-size:16px;color:var(--ink);line-height:1.6;">
+                  <strong>Service Areas:</strong> ${COMPANY_INFO.serviceAreas.join(' • ')}
+                </div>
+                <div style="padding-top:6px;">
+                  <a class="dt-button" href="${COMPANY_INFO.mapsUrl}" target="_blank" rel="noopener noreferrer">📍 Get Directions on Google Maps ↗</a>
+                </div>
+              </div>
+              <div style="min-height:340px;background:#e2e8f0;">
+                <iframe
+                  title="Cloud Comfort Ride Office Map"
+                  src="${COMPANY_INFO.mapsEmbedUrl}"
+                  style="width:100%;height:100%;min-height:340px;border:0;display:block;"
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade">
+                </iframe>
+              </div>
+            </div>
+          </div>
+        </section>
       `;
 
       const form = this.shadowRoot.getElementById('contact-form');

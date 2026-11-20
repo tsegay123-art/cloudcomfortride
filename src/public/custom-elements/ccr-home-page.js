@@ -1,5 +1,5 @@
-import { COMPANY_INFO, IMAGES } from '../companyData';
-import { CCR_SHARED_CSS, ensureGoogleFonts, initScrollReveals, syncThemeHost } from './ccr-styles';
+import { COMPANY_INFO, IMAGES, TESTIMONIALS } from '../companyData';
+import { CCR_SHARED_CSS, dispatchCcrNavigation, ensureGoogleFonts, initScrollReveals, syncThemeHost } from './ccr-styles';
 import './ccr-booking-form';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
@@ -26,6 +26,23 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       syncThemeHost(this);
       window.addEventListener('ccr-theme-change', this._onThemeSync);
       this.render();
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        try {
+          const pre = window.sessionStorage.getItem('ccr_selected_service');
+          if (pre) {
+            const form = this.shadowRoot && this.shadowRoot.getElementById('home-booking-form');
+            if (form) form.setAttribute('initial-service', pre);
+          }
+        } catch (e) {
+          // Ignore
+        }
+      }
+      if (typeof window !== 'undefined' && (window.location.hash === '#request' || window.location.search.includes('book=1'))) {
+        setTimeout(() => {
+          const req = this.shadowRoot && this.shadowRoot.getElementById('request');
+          if (req) req.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 120);
+      }
     }
 
     disconnectedCallback() {
@@ -33,11 +50,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
     }
 
     _navigate(path, serviceId = '') {
-      this.dispatchEvent(new CustomEvent('navigate', {
-        detail: { path, serviceId },
-        bubbles: true,
-        composed: true
-      }));
+      dispatchCcrNavigation(this, path, serviceId);
     }
 
     render() {
@@ -594,8 +607,58 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           </div>
         </section>
 
+        <!-- REVIEWS & GOOGLE PROFILE -->
+        <section class="sec reveal" id="reviews">
+          <div class="container">
+            <div class="sec-head">
+              <span class="eyebrow"><span class="eyebrow-dot"></span> Verified Patient &amp; Facility Reviews</span>
+              <h2>Trusted Across <span style="color:var(--gold-accent);">Seattle &amp; King County</span></h2>
+              <p>Serving patients, families, and medical discharge coordinators from our Seattle headquarters at 1902 E Yesler Way Unit #4.</p>
+            </div>
+            <div class="grid-3" style="margin-bottom:44px;">
+              ${TESTIMONIALS.map((t) => `
+                <article class="card" style="padding:26px;display:flex;flex-direction:column;justify-content:space-between;gap:14px;border-top:4px solid #f3bf28;">
+                  <div>
+                    <div style="color:#f59e0b;font-size:18px;letter-spacing:2px;margin-bottom:10px;">★★★★★</div>
+                    <p style="font-size:17px;color:var(--ink);line-height:1.65;">“${t.quote}”</p>
+                  </div>
+                  <div style="padding-top:14px;border-top:1px solid var(--line);">
+                    <strong style="font-size:17px;display:block;">${t.name}</strong>
+                    <span style="font-size:15px;color:var(--ink);display:block;margin-top:2px;">${t.role} • ${t.location}</span>
+                  </div>
+                </article>
+              `).join('')}
+            </div>
+
+            <div class="card" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));overflow:hidden;border:2px solid var(--card-border);">
+              <div style="padding:30px;display:flex;flex-direction:column;justify-content:center;gap:14px;">
+                <span class="eyebrow"><span class="eyebrow-dot"></span> Google Business Profile</span>
+                <h3 style="font-size:clamp(22px,2.2vw,28px);font-weight:800;">Seattle Dispatch &amp; Service Map</h3>
+                <p style="font-size:17px;color:var(--ink);line-height:1.65;">
+                  <strong>${COMPANY_INFO.brandName}</strong> (Cloud Medical Transportation)<br />
+                  ${COMPANY_INFO.address}<br />
+                  ${COMPANY_INFO.operatingHours}
+                </p>
+                <div style="display:flex;flex-wrap:wrap;gap:12px;padding-top:4px;">
+                  <a class="dt-button" href="${COMPANY_INFO.mapsUrl}" target="_blank" rel="noopener noreferrer">📍 Open in Google Maps ↗</a>
+                  <a class="dt-button-outline" href="tel:${COMPANY_INFO.phoneRaw}">☎ ${COMPANY_INFO.phoneDisplay}</a>
+                </div>
+              </div>
+              <div style="min-height:300px;background:#e2e8f0;">
+                <iframe
+                  title="Cloud Comfort Ride Seattle Location Map"
+                  src="${COMPANY_INFO.mapsEmbedUrl}"
+                  style="width:100%;height:100%;min-height:300px;border:0;display:block;"
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade">
+                </iframe>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- INLINE BOOKING FORM -->
-        <section class="sec" id="request">
+        <section class="sec-alt" id="request">
           <div class="container" style="max-width:1060px;">
             <div class="sec-head">
               <span class="eyebrow"><span class="eyebrow-dot"></span> Let’s plan your trip</span>

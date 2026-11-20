@@ -1,11 +1,11 @@
-import { BOOKING_SERVICE_OPTIONS, COMPANY_INFO, getServiceTitle } from '../companyData';
+import { BOOKING_SERVICE_OPTIONS, COMPANY_INFO, SEATTLE_MEDICAL_CENTERS, getServiceTitle } from '../companyData';
 import {
   buildVoucherMarkup,
   getTomorrowDateStr,
   saveLocalBooking,
   validateBookingPayload
 } from '../bookingHelpers';
-import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
+import { CCR_SHARED_CSS, dispatchCcrNavigation, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrBookingForm extends HTMLElement {
@@ -48,7 +48,15 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
     connectedCallback() {
       ensureGoogleFonts();
       syncThemeHost(this);
-      const initial = this.getAttribute('initial-service');
+      let initial = this.getAttribute('initial-service');
+      if (!initial && typeof window !== 'undefined' && window.sessionStorage) {
+        try {
+          initial = window.sessionStorage.getItem('ccr_selected_service') || '';
+          if (initial) window.sessionStorage.removeItem('ccr_selected_service');
+        } catch (e) {
+          // Ignore
+        }
+      }
       if (initial) this._state.serviceType = initial;
       window.addEventListener('ccr-theme-change', this._onThemeSync);
       this.render();
@@ -273,7 +281,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           this.render();
         });
         this.shadowRoot.getElementById('view-my-bookings').addEventListener('click', () => {
-          this.dispatchEvent(new CustomEvent('navigate', { detail: { path: '/my-bookings' }, bubbles: true, composed: true }));
+          dispatchCcrNavigation(this, '/my-bookings');
         });
         this.shadowRoot.getElementById('new-booking').addEventListener('click', () => {
           this._completedBooking = null;
@@ -408,6 +416,33 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .check-row input { width: 22px; height: 22px; min-height: auto; flex-shrink: 0; }
           .err-msg { color: #dc2626; font-size: 15px; font-weight: 600; margin-top: 6px; }
           .hp-field { position: absolute; left: -9999px; opacity: 0; height: 0; width: 0; overflow: hidden; }
+          .quick-facilities { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 6px; align-items: center; }
+          .fac-chip {
+            padding: 8px 14px;
+            min-height: 40px;
+            border-radius: 9999px;
+            border: 1.5px solid var(--card-border);
+            background: var(--surface-alt);
+            color: var(--ink);
+            font-size: 14px;
+            font-weight: 700;
+          }
+          .fac-chip:hover { border-color: #123e77; background: #eaf2ff; color: #061f46; }
+          .map-preview-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            padding: 10px 16px;
+            min-height: 44px;
+            border-radius: 10px;
+            border: 1.5px solid #123e77;
+            background: #eaf2ff;
+            color: #061f46;
+            font-size: 15px;
+            font-weight: 700;
+          }
+          .map-preview-btn:hover { background: #061f46; color: #ffffff; }
           .submit-bar {
             margin-top: 24px;
             display: flex;
@@ -493,6 +528,11 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               <input type="text" id="destinationNotes" placeholder="e.g., Dialysis Unit, 3rd Floor" value="${s.destinationNotes}" />
             </div>
           </div>
+          <div class="quick-facilities">
+            <span style="font-size:14px;font-weight:700;color:var(--ink);">Quick-Fill Hospital:</span>
+            ${SEATTLE_MEDICAL_CENTERS.map((c, idx) => `<button type="button" class="fac-chip" data-facility="${idx}">${c.name}</button>`).join('')}
+          </div>
+          <button type="button" class="map-preview-btn" id="preview-route-map">📍 Preview Pickup / Destination Route on Google Maps ↗</button>
 
           <div class="section-head"><span class="step-num">3</span> Passenger &amp; Mobility Details</div>
           <div class="grid-2">
@@ -579,6 +619,31 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         companionBox.addEventListener('change', () => {
           this._collectValues();
           this.render();
+        });
+      }
+      this.shadowRoot.querySelectorAll('[data-facility]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          this._collectValues();
+          const item = SEATTLE_MEDICAL_CENTERS[Number(btn.getAttribute('data-facility'))];
+          if (item) {
+            this._state.facilityName = item.name;
+            this._state.destinationAddress = item.address;
+            this.render();
+          }
+        });
+      });
+      const routeBtn = this.shadowRoot.getElementById('preview-route-map');
+      if (routeBtn) {
+        routeBtn.addEventListener('click', () => {
+          this._collectValues();
+          const origin = (this._state.pickupAddress || '').trim();
+          const dest = (this._state.destinationAddress || '').trim();
+          const url = origin && dest
+            ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}`
+            : dest
+              ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dest)}`
+              : COMPANY_INFO.mapsUrl;
+          window.open(url, '_blank', 'noopener,noreferrer');
         });
       }
       this.shadowRoot.getElementById('booking-form').addEventListener('submit', (ev) => this._handleSubmit(ev));

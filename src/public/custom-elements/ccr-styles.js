@@ -354,3 +354,39 @@ export function syncThemeHost(hostEl) {
   }
 }
 
+export function dispatchCcrNavigation(hostEl, path, serviceId = '') {
+  const requested = path || '/';
+  if (serviceId && typeof window !== 'undefined' && window.sessionStorage) {
+    try {
+      window.sessionStorage.setItem('ccr_selected_service', serviceId);
+    } catch (e) {
+      // Ignore storage errors
+    }
+  }
+
+  let routeMap = {};
+  try {
+    const rawMap = hostEl && typeof hostEl.getAttribute === 'function' ? hostEl.getAttribute('route-map') : '';
+    if (rawMap) routeMap = JSON.parse(rawMap);
+  } catch (e) {
+    routeMap = {};
+  }
+
+  const targetPath = routeMap[requested] || requested;
+  const prevHref = typeof window !== 'undefined' ? window.location.href : '';
+
+  hostEl.dispatchEvent(new CustomEvent('navigate', {
+    detail: { path: requested, serviceId },
+    bubbles: true,
+    composed: true
+  }));
+
+  if (typeof window !== 'undefined' && targetPath && window.location.pathname !== targetPath) {
+    setTimeout(() => {
+      if (window.location.href === prevHref && window.location.pathname !== targetPath) {
+        window.location.assign(targetPath);
+      }
+    }, 650);
+  }
+}
+
