@@ -33,10 +33,30 @@
         "siteOwner": { "invoke": true },
         "siteMember": { "invoke": true },
         "anonymous": { "invoke": true }
+      },
+      "listAllBookings": {
+        "siteOwner": { "invoke": true },
+        "siteMember": { "invoke": true },
+        "anonymous": { "invoke": true }
+      },
+      "updateBookingStatus": {
+        "siteOwner": { "invoke": true },
+        "siteMember": { "invoke": true },
+        "anonymous": { "invoke": true }
       }
     },
     "backend/contactService.jsw": {
       "submitInquiry": {
+        "siteOwner": { "invoke": true },
+        "siteMember": { "invoke": true },
+        "anonymous": { "invoke": true }
+      },
+      "listAllInquiries": {
+        "siteOwner": { "invoke": true },
+        "siteMember": { "invoke": true },
+        "anonymous": { "invoke": true }
+      },
+      "resolveInquiry": {
         "siteOwner": { "invoke": true },
         "siteMember": { "invoke": true },
         "anonymous": { "invoke": true }

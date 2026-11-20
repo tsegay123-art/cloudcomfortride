@@ -2,8 +2,8 @@ import wixLocationFrontend from 'wix-location-frontend';
 import wixSiteFrontend from 'wix-site-frontend';
 import wixSeoFrontend from 'wix-seo-frontend';
 import { session } from 'wix-storage-frontend';
-import { submitBooking, searchBookings, cancelBooking, requestBookingConfirmation } from 'backend/bookingService.jsw';
-import { submitInquiry } from 'backend/contactService.jsw';
+import { submitBooking, searchBookings, cancelBooking, requestBookingConfirmation, listAllBookings, updateBookingStatus } from 'backend/bookingService.jsw';
+import { submitInquiry, listAllInquiries, resolveInquiry } from 'backend/contactService.jsw';
 import { COMPANY_INFO } from './companyData';
 
 export const SELECTED_SERVICE_KEY = 'ccr_selected_service';
@@ -22,7 +22,8 @@ const ROUTE_ALIASES = {
   '/contact': { urls: ['/contact', '/contact-us'], names: ['contact'] },
   '/privacy': { urls: ['/privacy', '/privacy-policy'], names: ['privacy policy', 'privacy'] },
   '/terms': { urls: ['/terms', '/terms-of-service'], names: ['terms of service', 'terms'] },
-  '/accessibility': { urls: ['/accessibility', '/accessibility-statement'], names: ['accessibility statement', 'accessibility'] }
+  '/accessibility': { urls: ['/accessibility', '/accessibility-statement'], names: ['accessibility statement', 'accessibility'] },
+  '/owner-dispatch': { urls: ['/owner-dispatch', '/dispatch'], names: ['owner dispatch', 'dispatch'] }
 };
 
 function resolveWixRoute(requestedPath) {
@@ -84,21 +85,28 @@ function getElement(selector) {
   }
 }
 
-function resolveElementOrFallback(selector) {
-  const direct = getElement(selector);
-  if (direct && typeof /** @type {any} */ (direct).on === 'function') {
-    return direct;
-  }
+function resolveAllPageCustomElements(selector) {
+  const results = [];
+  const seen = new Set();
+  const add = (el) => {
+    if (el && typeof el.on === 'function' && !seen.has(el)) {
+      seen.add(el);
+      results.push(el);
+    }
+  };
+  add(getElement(selector));
   try {
     const all = /** @type {any} */ ($w('CustomElement'));
-    if (Array.isArray(all) && all.length) {
-      return all.find((item) => item && item.id !== 'ccrHeader' && item.id !== 'ccrFooter') || all[0];
-    }
-    if (all && typeof all.on === 'function') return all;
+    const list = Array.isArray(all) ? all : (all && typeof all.forEach === 'function' ? (() => { const arr = []; all.forEach((x) => arr.push(x)); return arr; })() : [all]);
+    list.forEach((item) => {
+      if (item && item.id !== 'ccrHeader' && item.id !== 'ccrFooter') {
+        add(item);
+      }
+    });
   } catch (e) {
     // Ignore
   }
-  return direct;
+  return results;
 }
 
 export function applyBusinessSeo() {
@@ -131,10 +139,11 @@ export function applyBusinessSeo() {
 }
 
 export function setElementAttribute(selector, name, value) {
-  const el = /** @type {any} */ (resolveElementOrFallback(selector));
-  if (el && typeof el.setAttribute === 'function') {
-    el.setAttribute(name, value);
-  }
+  resolveAllPageCustomElements(selector).forEach((el) => {
+    if (typeof el.setAttribute === 'function') {
+      el.setAttribute(name, value);
+    }
+  });
 }
 
 export function wireHeaderElement(selector, currentPath) {
@@ -188,118 +197,192 @@ export function wireLegalElement(selector, mode) {
 }
 
 export function wireNavigationElement(selector) {
-  const el = /** @type {any} */ (resolveElementOrFallback(selector));
-  if (!el || typeof el.on !== 'function') return;
-  if (typeof el.setAttribute === 'function') {
-    el.setAttribute('route-map', JSON.stringify(buildRouteMap()));
-  }
-  el.on('navigate', (event) => {
-    const detail = (event && event.detail) || {};
-    if (detail.serviceId) {
-      session.setItem(SELECTED_SERVICE_KEY, detail.serviceId);
+  const targets = resolveAllPageCustomElements(selector);
+  if (!targets.length) return;
+  const routeMapJson = JSON.stringify(buildRouteMap());
+  targets.forEach((el) => {
+    if (typeof el.setAttribute === 'function') {
+      el.setAttribute('route-map', routeMapJson);
     }
-    if (detail.path) {
-      wixLocationFrontend.to(resolveWixRoute(detail.path));
-    }
+    el.on('navigate', (event) => {
+      const detail = (event && event.detail) || {};
+      if (detail.serviceId) {
+        session.setItem(SELECTED_SERVICE_KEY, detail.serviceId);
+      }
+      if (detail.path) {
+        wixLocationFrontend.to(resolveWixRoute(detail.path));
+      }
+    });
   });
 }
 
 export function wireBookingElement(selector) {
-  const el = /** @type {any} */ (resolveElementOrFallback(selector));
-  if (!el || typeof el.on !== 'function') return;
+  const targets = resolveAllPageCustomElements(selector);
+  if (!targets.length) return;
 
   const preselected = session.getItem(SELECTED_SERVICE_KEY);
-  if (preselected && typeof el.setAttribute === 'function') {
-    el.setAttribute('initial-service', preselected);
+  if (preselected) {
+    targets.forEach((el) => {
+      if (typeof el.setAttribute === 'function') {
+        el.setAttribute('initial-service', preselected);
+      }
+    });
     session.removeItem(SELECTED_SERVICE_KEY);
   }
 
-  el.on('submitBooking', async (event) => {
-    const detail = (event && event.detail) || {};
-    try {
-      const result = await submitBooking(detail.payload);
-      if (result && result.success && result.booking) {
-        el.setAttribute('booking-error', '');
-        el.setAttribute('booking-result', JSON.stringify(result.booking));
-      } else {
-        const msg = (result && result.message) || 'Please check your booking details.';
-        el.setAttribute('booking-error', msg);
+  targets.forEach((el) => {
+    el.on('submitBooking', async (event) => {
+      const detail = (event && event.detail) || {};
+      try {
+        const result = await submitBooking(detail.payload);
+        if (result && result.success && result.booking) {
+          el.setAttribute('booking-error', '');
+          el.setAttribute('booking-result', JSON.stringify(result.booking));
+        } else {
+          const msg = (result && result.message) || 'Please check your booking details.';
+          el.setAttribute('booking-error', msg);
+        }
+      } catch (err) {
+        el.setAttribute('booking-error', 'Unable to reach dispatch server. Please call (206) 327-4411.');
       }
-    } catch (err) {
-      el.setAttribute('booking-error', 'Unable to reach dispatch server. Please call (206) 327-4411.');
-    }
+    });
   });
 }
 
 export function wireContactElement(selector) {
-  const el = /** @type {any} */ (resolveElementOrFallback(selector));
-  if (!el || typeof el.on !== 'function') return;
-  el.on('submitContact', async (event) => {
-    const detail = (event && event.detail) || {};
-    try {
-      const result = await submitInquiry(detail.payload);
-      if (result && result.success) {
-        el.setAttribute('contact-error', '');
-        el.setAttribute('contact-result', JSON.stringify(result.inquiry || { ok: true }));
-      } else {
-        const msg = (result && result.message) || 'Please check your inquiry details.';
-        el.setAttribute('contact-error', msg);
+  const targets = resolveAllPageCustomElements(selector);
+  if (!targets.length) return;
+  targets.forEach((el) => {
+    el.on('submitContact', async (event) => {
+      const detail = (event && event.detail) || {};
+      try {
+        const result = await submitInquiry(detail.payload);
+        if (result && result.success) {
+          el.setAttribute('contact-error', '');
+          el.setAttribute('contact-result', JSON.stringify(result.inquiry || { ok: true }));
+        } else {
+          const msg = (result && result.message) || 'Please check your inquiry details.';
+          el.setAttribute('contact-error', msg);
+        }
+      } catch (err) {
+        el.setAttribute('contact-error', 'Failed to send message. Please call (206) 327-4411.');
       }
-    } catch (err) {
-      el.setAttribute('contact-error', 'Failed to send message. Please call (206) 327-4411.');
-    }
+    });
   });
 }
 
 export async function wireMyBookingsElement(selector) {
-  const el = /** @type {any} */ (resolveElementOrFallback(selector));
-  if (!el || typeof el.on !== 'function') return;
+  const targets = resolveAllPageCustomElements(selector);
+  if (!targets.length) return;
   wireNavigationElement(selector);
 
-  el.on('removeBooking', async (event) => {
-    const detail = (event && event.detail) || {};
-    if (detail.bookingId) {
-      try {
-        await cancelBooking(detail.bookingId);
-      } catch (e) {
-        // Local storage removal still proceeds in the custom element
+  targets.forEach((el) => {
+    el.on('removeBooking', async (event) => {
+      const detail = (event && event.detail) || {};
+      if (detail.bookingId) {
+        try {
+          await cancelBooking(detail.bookingId);
+        } catch (e) {
+          // Local storage removal still proceeds in the custom element
+        }
       }
-    }
-  });
+    });
 
-  el.on('searchBookings', async (event) => {
-    const detail = (event && event.detail) || {};
-    const q = String(detail.query || '').trim() || 'CCR-';
-    try {
-      const res = await searchBookings(q);
-      if (res && res.success && Array.isArray(res.items)) {
-        const activeItems = res.items.filter((item) => item.status !== 'cancelled');
-        el.setAttribute('server-bookings', JSON.stringify(activeItems));
-      }
-    } catch (e) {
-      // Local filtering remains active
-    }
-  });
-
-  el.on('requestConfirmation', async (event) => {
-    const detail = (event && event.detail) || {};
-    if (detail.bookingId) {
+    el.on('searchBookings', async (event) => {
+      const detail = (event && event.detail) || {};
+      const q = String(detail.query || '').trim() || 'CCR-';
       try {
-        await requestBookingConfirmation(detail.bookingId);
-        el.setAttribute('confirmation-requested', detail.bookingId);
+        const res = await searchBookings(q);
+        if (res && res.success && Array.isArray(res.items)) {
+          const activeItems = res.items.filter((item) => item.status !== 'cancelled');
+          el.setAttribute('server-bookings', JSON.stringify(activeItems));
+        }
       } catch (e) {
-        // Ignore
+        // Local filtering remains active
       }
-    }
+    });
+
+    el.on('requestConfirmation', async (event) => {
+      const detail = (event && event.detail) || {};
+      if (detail.bookingId) {
+        try {
+          await requestBookingConfirmation(detail.bookingId);
+          el.setAttribute('confirmation-requested', detail.bookingId);
+        } catch (e) {
+          // Ignore
+        }
+      }
+    });
   });
 
   try {
     const res = await searchBookings('CCR-');
     if (res && res.success && Array.isArray(res.items)) {
       const activeItems = res.items.filter((item) => item.status !== 'cancelled');
-      el.setAttribute('server-bookings', JSON.stringify(activeItems));
+      const json = JSON.stringify(activeItems);
+      targets.forEach((el) => el.setAttribute('server-bookings', json));
     }
   } catch (e) {
     // Local storage fallback handled inside custom element
   }
+}
+
+export function wireDispatchElement(selector) {
+  const targets = resolveAllPageCustomElements(selector);
+  if (!targets.length) return;
+
+  targets.forEach((el) => {
+    el.on('dispatchLogin', async (event) => {
+      const detail = (event && event.detail) || {};
+      const pin = detail.pin || '';
+      try {
+        const [bRes, iRes] = await Promise.all([listAllBookings(pin), listAllInquiries(pin)]);
+        if (bRes && bRes.success) {
+          el.setAttribute('dispatch-error', '');
+          el.setAttribute('dispatch-data', JSON.stringify({
+            bookings: bRes.items || [],
+            inquiries: (iRes && iRes.items) || []
+          }));
+        } else {
+          el.setAttribute('dispatch-error', (bRes && bRes.message) || 'Invalid Dispatch PIN.');
+        }
+      } catch (err) {
+        el.setAttribute('dispatch-error', 'Unable to load dispatch data.');
+      }
+    });
+
+    el.on('updateBookingStatus', async (event) => {
+      const detail = (event && event.detail) || {};
+      try {
+        const res = await updateBookingStatus(detail.pin, detail.bookingId, detail.status);
+        if (res && res.success) {
+          const [bRes, iRes] = await Promise.all([listAllBookings(detail.pin), listAllInquiries(detail.pin)]);
+          el.setAttribute('dispatch-data', JSON.stringify({
+            bookings: (bRes && bRes.items) || [],
+            inquiries: (iRes && iRes.items) || []
+          }));
+        } else {
+          el.setAttribute('dispatch-error', (res && res.message) || 'Failed to update booking.');
+        }
+      } catch (err) {
+        el.setAttribute('dispatch-error', 'Failed to update booking.');
+      }
+    });
+
+    el.on('resolveInquiry', async (event) => {
+      const detail = (event && event.detail) || {};
+      try {
+        const res = await resolveInquiry(detail.pin, detail.inquiryId);
+        if (res && res.success) {
+          const [bRes, iRes] = await Promise.all([listAllBookings(detail.pin), listAllInquiries(detail.pin)]);
+          el.setAttribute('dispatch-data', JSON.stringify({
+            bookings: (bRes && bRes.items) || [],
+            inquiries: (iRes && iRes.items) || []
+          }));
+        }
+      } catch (err) {
+        el.setAttribute('dispatch-error', 'Failed to resolve inquiry.');
+      }
+    });
+  });
 }

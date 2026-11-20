@@ -1,11 +1,23 @@
 import wixData from 'wix-data';
 import wixCrmBackend from 'wix-crm-backend';
+import { getSecret } from 'wix-secrets-backend';
 import { getServiceTitle } from 'public/companyData';
 
 const BOOKINGS_COLLECTION = 'Bookings';
 const OWNER_EMAIL = 'info@cloudmedicaltrans.com';
 const OWNER_EMAIL_TEMPLATE_ID = 'booking_owner_notification';
 const CUSTOMER_EMAIL_TEMPLATE_ID = 'booking_customer_confirmation';
+
+async function verifyDispatchPin(pin) {
+  let expectedPin = '';
+  try {
+    expectedPin = await getSecret('CCR_DISPATCH_PIN');
+  } catch (e) {
+    // Secret not provisioned yet; require setup or fallback to site-owner default
+    expectedPin = '2023';
+  }
+  return Boolean(pin && String(pin).trim() === String(expectedPin).trim());
+}
 
 function validateServerBooking(data) {
   const errors = {};
@@ -259,5 +271,86 @@ export async function requestBookingConfirmation(bookingId) {
   }
 
   return { success: true, bookingId: id };
+}
+
+/**
+ * Owner Dispatch: list all bookings from Wix CMS 'Bookings' collection.
+ */
+export async function listAllBookings(pin) {
+  const ok = await verifyDispatchPin(pin);
+  if (!ok) {
+    return { success: false, message: 'Invalid Dispatch PIN.', items: [] };
+  }
+
+  try {
+    const res = await wixData.query(BOOKINGS_COLLECTION)
+      .descending('createdAt')
+      .limit(100)
+      .find({ suppressAuth: true });
+    return { success: true, items: res.items || [] };
+  } catch (err) {
+    return { success: false, items: [], message: 'Bookings CMS collection not yet provisioned.' };
+  }
+}
+
+/**
+ * Owner Dispatch: approve ('confirmed') or cancel ('cancelled') a booking and notify customer.
+ */
+export async function updateBookingStatus(pin, bookingId, nextStatus) {
+  const ok = await verifyDispatchPin(pin);
+  if (!ok) {
+    return { success: false, message: 'Invalid Dispatch PIN.' };
+  }
+
+  const allowed = ['confirmed', 'cancelled', 'pending_review'];
+  if (!allowed.includes(nextStatus)) {
+    return { success: false, message: 'Invalid status.' };
+  }
+
+  try {
+    const res = await wixData.query(BOOKINGS_COLLECTION)
+      .eq('bookingId', String(bookingId).trim())
+      .limit(1)
+      .find({ suppressAuth: true });
+
+    if (!res.items || res.items.length === 0) {
+      return { success: false, message: 'Booking not found in CMS.' };
+    }
+
+    const updated = {
+      ...res.items[0],
+      status: nextStatus,
+      updatedAt: new Date().toISOString()
+    };
+    await wixData.update(BOOKINGS_COLLECTION, updated, { suppressAuth: true });
+
+    if (nextStatus === 'confirmed' && updated.passengerEmail) {
+      try {
+        const custRes = await wixCrmBackend.contacts.appendOrCreateContact({
+          emails: [{ email: updated.passengerEmail, primary: true }]
+        });
+        if (custRes && custRes.contactId) {
+          await wixCrmBackend.triggeredEmails.emailContact(CUSTOMER_EMAIL_TEMPLATE_ID, custRes.contactId, {
+            variables: {
+              bookingId: updated.bookingId,
+              serviceTitle: updated.serviceTitle || getServiceTitle(updated.serviceType),
+              pickupDate: updated.pickupDate,
+              pickupTime: updated.pickupTime,
+              pickupAddress: updated.pickupAddress,
+              destinationAddress: updated.destinationAddress,
+              passengerName: updated.passengerName,
+              specialInstructions: `Status: CONFIRMED by Cloud Comfort Ride Dispatch.`
+            }
+          });
+        }
+      } catch (e) {
+        // Triggered email optional
+      }
+    }
+
+    return { success: true, booking: updated };
+  } catch (err) {
+    return { success: false, message: 'Unable to update booking status.' };
+  }
 }
 

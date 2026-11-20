@@ -58,36 +58,39 @@ export const BOOKING_SERVICE_OPTIONS = [
   { value: '', label: 'Choose our service', disabled: true },
   { value: 'non_emergency_medical', label: 'Non-emergency medical transportation' },
   { value: 'wheelchair', label: 'Wheelchair transportation' },
+  { value: 'hospital_dropoff', label: 'Hospital Drop-off' },
+  { value: 'hospital_discharge', label: 'Hospital Discharge' },
+  { value: 'doctors_appointment', label: 'Doctors Appointment' },
+  { value: 'dialysis', label: 'Dialysis' },
+  { value: 'chemo_centers', label: 'Chemo Centers' },
+  { value: 'therapy', label: 'Physical Therapy' },
+  { value: 'rehabilitation', label: 'Rehabilitation' },
+  { value: 'nursing_homes', label: 'Nursing Homes' },
+  { value: 'assisted_living', label: 'Assisted Living' },
+  { value: 'school_transport', label: 'Student Transportation' },
+  { value: 'prescription_pickup', label: 'Prescription Drop-off and Pickup' },
+  { value: 'senior_living_activities', label: 'Senior Living Activities' },
   { value: 'senior_private_pay', label: 'Senior & private-pay rides' },
   { value: 'private_transport', label: 'Private transportation' },
-  { value: 'hospital_discharge', label: 'Hospital discharge transportation' },
-  { value: 'school_transport', label: 'Private-pay school transportation' },
-  { value: 'dialysis', label: 'Dialysis appointment transportation' },
-  { value: 'therapy', label: 'Physical therapy transportation' }
+  { value: 'airport_services', label: 'Airport Services' },
+  { value: 'veterans', label: 'Veterans Transportation' },
+  { value: 'beauty_salon', label: 'Beauty Salon' },
+  { value: 'door_to_door', label: 'Door to Door Pick up' },
+  { value: 'family_events', label: 'Family Events' },
+  { value: 'mobility_assistance', label: 'Cane, Walker, Wheelchair & Mobility Assistance' }
 ];
 
 export function getServiceTitle(type) {
   if (!type) return 'Non-emergency medical transportation';
+  const match = BOOKING_SERVICE_OPTIONS.find((o) => o.value === type);
+  if (match && match.label) return match.label;
   switch (type) {
-    case 'non_emergency_medical':
     case 'routine':
       return 'Non-emergency medical transportation';
-    case 'wheelchair':
     case 'wheelchair_standard':
       return 'Wheelchair transportation';
-    case 'senior_private_pay':
-      return 'Senior & private-pay rides';
-    case 'private_transport':
-      return 'Private transportation';
-    case 'hospital_discharge':
     case 'discharge':
-      return 'Hospital discharge transportation';
-    case 'school_transport':
-      return 'Private-pay school transportation';
-    case 'dialysis':
-      return 'Dialysis appointment transportation';
-    case 'therapy':
-      return 'Physical therapy transportation';
+      return 'Hospital Discharge';
     default:
       return type;
   }

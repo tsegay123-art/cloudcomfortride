@@ -199,7 +199,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                   <div class="b-head">
                     <div>
                       <strong style="font-size:20px;">${bid}</strong>
-                      <span style="margin-left:10px;padding:4px 12px;border-radius:9999px;background:#fef3c7;color:#92400e;font-size:13px;font-weight:800;">
+                      <span style="margin-left:10px;padding:4px 12px;border-radius:9999px;background:${b.status === 'confirmed' ? '#dcfce7' : '#fef3c7'};color:${b.status === 'confirmed' ? '#166534' : '#92400e'};font-size:13px;font-weight:800;">
                         ${(b.status || 'pending_review').replace('_', ' ').toUpperCase()}
                       </span>
                     </div>

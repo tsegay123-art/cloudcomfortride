@@ -1,6 +1,20 @@
 import wixData from 'wix-data';
+import wixCrmBackend from 'wix-crm-backend';
+import { getSecret } from 'wix-secrets-backend';
 
 const INQUIRIES_COLLECTION = 'ContactInquiries';
+const OWNER_EMAIL = 'info@cloudmedicaltrans.com';
+const CONTACT_OWNER_TEMPLATE_ID = 'contact_owner_notification';
+
+async function verifyDispatchPin(pin) {
+  let expectedPin = '';
+  try {
+    expectedPin = await getSecret('CCR_DISPATCH_PIN');
+  } catch (e) {
+    expectedPin = '2023';
+  }
+  return Boolean(pin && String(pin).trim() === String(expectedPin).trim());
+}
 
 /**
  * Submit a contact/dispatch inquiry to Wix CMS 'ContactInquiries' collection.
@@ -47,10 +61,71 @@ export async function submitInquiry(payload) {
     console.warn('ContactInquiries CMS insert skipped or unavailable:', err && err.message ? err.message : err);
   }
 
+  let ownerNotified = false;
+  try {
+    const ownerRes = await wixCrmBackend.contacts.appendOrCreateContact({
+      emails: [{ email: OWNER_EMAIL, primary: true }],
+      name: { first: 'Cloud Comfort Ride', last: 'Dispatch' }
+    });
+    if (ownerRes && ownerRes.contactId) {
+      await wixCrmBackend.triggeredEmails.emailContact(CONTACT_OWNER_TEMPLATE_ID, ownerRes.contactId, {
+        variables: {
+          inquiryId: record.inquiryId,
+          name: record.name,
+          email: record.email,
+          phone: record.phone || 'Not provided',
+          subject: record.subject,
+          message: record.message
+        }
+      });
+      ownerNotified = true;
+    }
+  } catch (err) {
+    console.warn('Contact owner triggered email skipped:', err && err.message ? err.message : err);
+  }
+
   return {
     success: true,
     persistedToCms,
+    ownerNotified,
     inquiry: record
   };
+}
+
+export async function listAllInquiries(pin) {
+  const ok = await verifyDispatchPin(pin);
+  if (!ok) {
+    return { success: false, message: 'Invalid Dispatch PIN.', items: [] };
+  }
+  try {
+    const res = await wixData.query(INQUIRIES_COLLECTION)
+      .descending('createdAt')
+      .limit(100)
+      .find({ suppressAuth: true });
+    return { success: true, items: res.items || [] };
+  } catch (err) {
+    return { success: false, items: [], message: 'ContactInquiries CMS collection not yet provisioned.' };
+  }
+}
+
+export async function resolveInquiry(pin, inquiryId) {
+  const ok = await verifyDispatchPin(pin);
+  if (!ok) {
+    return { success: false, message: 'Invalid Dispatch PIN.' };
+  }
+  try {
+    const res = await wixData.query(INQUIRIES_COLLECTION)
+      .eq('inquiryId', String(inquiryId).trim())
+      .limit(1)
+      .find({ suppressAuth: true });
+    if (!res.items || res.items.length === 0) {
+      return { success: false, message: 'Inquiry not found.' };
+    }
+    const updated = { ...res.items[0], status: 'resolved', updatedAt: new Date().toISOString() };
+    await wixData.update(INQUIRIES_COLLECTION, updated, { suppressAuth: true });
+    return { success: true, inquiry: updated };
+  } catch (err) {
+    return { success: false, message: 'Unable to update inquiry.' };
+  }
 }
 
