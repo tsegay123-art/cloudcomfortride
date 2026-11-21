@@ -1,6 +1,6 @@
 import wixData from 'wix-data';
 import { getSecret } from 'wix-secrets-backend';
-import { OWNER_EMAIL, sendWixOrResendNotification } from 'backend/notificationService';
+import { OWNER_EMAIL, sendWixOrResendNotification } from './notificationService';
 
 const INQUIRIES_COLLECTION = 'ContactMessages';
 const CONTACT_OWNER_TEMPLATE_ID = 'contact_owner_notification';

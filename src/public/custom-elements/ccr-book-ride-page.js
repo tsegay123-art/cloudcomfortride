@@ -19,6 +19,17 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       ensureGoogleFonts();
       syncThemeHost(this);
       window.addEventListener('ccr-theme-change', this._onThemeSync);
+      this._onInnerSubmit = (e) => {
+        if (e.target !== this) {
+          e.stopPropagation();
+          this.dispatchEvent(new CustomEvent('submitBooking', {
+            detail: e.detail,
+            bubbles: true,
+            composed: true
+          }));
+        }
+      };
+      this.shadowRoot.addEventListener('submitBooking', this._onInnerSubmit);
       this.render();
     }
 

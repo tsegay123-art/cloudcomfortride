@@ -1,7 +1,7 @@
 import wixData from 'wix-data';
 import { getSecret } from 'wix-secrets-backend';
 import { getServiceTitle } from 'public/companyData';
-import { OWNER_EMAIL, sendWixOrResendNotification } from 'backend/notificationService';
+import { OWNER_EMAIL, sendWixOrResendNotification } from './notificationService';
 
 const BOOKINGS_COLLECTION = 'Bookings';
 const OWNER_EMAIL_TEMPLATE_ID = 'booking_owner_notification';

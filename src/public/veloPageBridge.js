@@ -17,8 +17,8 @@ const ROUTE_ALIASES = {
   '/why-cloud-comfort-ride': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
   '/fleet': { urls: ['/fleet', '/why-cloud-comfort-ride', '/safety-drivers'], names: ['fleet', 'why cloud comfort ride', 'why cloud medical'] },
   '/why-cloud-medical': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
-  '/book-a-ride': { urls: ['/book-a-ride', '/book-online', '/book-ride'], names: ['book a ride', 'book online', 'book ride', 'schedule'] },
-  '/book-online': { urls: ['/book-a-ride', '/book-online', '/book-ride'], names: ['book a ride', 'book online', 'book ride', 'schedule'] },
+  '/book-a-ride': { urls: ['/book-a-ride', '/book-ride'], names: ['book a ride', 'book ride'] },
+  '/book-online': { urls: ['/book-a-ride', '/book-ride'], names: ['book a ride', 'book ride'] },
   '/my-bookings': { urls: ['/my-bookings', '/my-booking'], names: ['my bookings', 'my booking'] },
   '/contact': { urls: ['/contact', '/contact-us'], names: ['contact'] },
   '/privacy': { urls: ['/privacy', '/privacy-policy'], names: ['privacy policy', 'privacy'] },
@@ -50,7 +50,7 @@ function resolveWixRoute(requestedPath) {
 
       const byName = pages.find((p) => {
         const pname = String(p.name || '').toLowerCase();
-        if ((clean === '/book-a-ride' || clean === '/book-online') && pname.includes('my booking')) {
+        if ((clean === '/book-a-ride' || clean === '/book-online') && (pname.includes('my booking') || pname.includes('book online') || pname.includes('booking form'))) {
           return false;
         }
         return rule.names.some((n) => pname.includes(n));
@@ -205,6 +205,12 @@ function resolveAllPageCustomElements(selector) {
     });
   } catch (e) {
     // Ignore
+  }
+  for (let i = 1; i <= 20; i += 1) {
+    const candidate = getElement(`#customElement${i}`);
+    if (candidate && candidate.id !== 'ccrHeader' && candidate.id !== 'ccrFooter') {
+      add(candidate);
+    }
   }
   return results;
 }
