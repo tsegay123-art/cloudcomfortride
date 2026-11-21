@@ -59,6 +59,12 @@ export function validateContactPayload(data) {
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(data.email).trim())) {
     errors.email = 'Please provide a valid email address';
   }
+  if (data.phone && String(data.phone).trim()) {
+    const phoneDigits = String(data.phone).replace(/\D/g, '');
+    if (phoneDigits.length < 10) {
+      errors.phone = 'Please provide a valid 10-digit telephone number';
+    }
+  }
   if (!data.message || !String(data.message).trim()) {
     errors.message = 'Please enter a message for our dispatch team';
   }

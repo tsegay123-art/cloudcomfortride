@@ -2,7 +2,7 @@ import wixLocationFrontend from 'wix-location-frontend';
 import wixSiteFrontend from 'wix-site-frontend';
 import wixSeoFrontend from 'wix-seo-frontend';
 import { session } from 'wix-storage-frontend';
-import { submitBooking, searchBookings, cancelBooking, requestBookingConfirmation, listAllBookings, updateBookingStatus } from 'backend/bookingService.jsw';
+import { submitBooking, lookupVerifiedBooking, cancelBooking, requestBookingConfirmation, listAllBookings, updateBookingStatus } from 'backend/bookingService.jsw';
 import { submitInquiry, listAllInquiries, resolveInquiry } from 'backend/contactService.jsw';
 import { COMPANY_INFO } from './companyData';
 
@@ -403,28 +403,30 @@ export async function wireMyBookingsElement(selector) {
   wireNavigationElement(selector);
 
   targets.forEach((el) => {
+    if (!markWired(el, 'myBookings')) return;
     el.on('removeBooking', async (event) => {
       const detail = (event && event.detail) || {};
       if (detail.bookingId) {
         try {
-          await cancelBooking(detail.bookingId);
+          await cancelBooking(detail.bookingId, detail.verifier || '');
         } catch (e) {
           // Local storage removal still proceeds in the custom element
         }
       }
     });
 
-    el.on('searchBookings', async (event) => {
+    el.on('lookupBooking', async (event) => {
       const detail = (event && event.detail) || {};
-      const q = String(detail.query || '').trim() || 'CCR-';
       try {
-        const res = await searchBookings(q);
+        const res = await lookupVerifiedBooking(detail.bookingReference, detail.verifier);
         if (res && res.success && Array.isArray(res.items)) {
-          const activeItems = res.items.filter((item) => item.status !== 'cancelled');
-          el.setAttribute('server-bookings', JSON.stringify(activeItems));
+          el.setAttribute('lookup-error', '');
+          el.setAttribute('server-bookings', JSON.stringify(res.items));
+        } else {
+          el.setAttribute('lookup-error', (res && res.message) || 'No matching booking found.');
         }
       } catch (e) {
-        // Local filtering remains active
+        el.setAttribute('lookup-error', 'Unable to look up booking right now. Please call (206) 327-4411.');
       }
     });
 
@@ -440,17 +442,6 @@ export async function wireMyBookingsElement(selector) {
       }
     });
   });
-
-  try {
-    const res = await searchBookings('CCR-');
-    if (res && res.success && Array.isArray(res.items)) {
-      const activeItems = res.items.filter((item) => item.status !== 'cancelled');
-      const json = JSON.stringify(activeItems);
-      targets.forEach((el) => el.setAttribute('server-bookings', json));
-    }
-  } catch (e) {
-    // Local storage fallback handled inside custom element
-  }
 }
 
 export function wireDispatchElement(selector) {
@@ -458,6 +449,7 @@ export function wireDispatchElement(selector) {
   if (!targets.length) return;
 
   targets.forEach((el) => {
+    if (!markWired(el, 'dispatch')) return;
     el.on('dispatchLogin', async (event) => {
       const detail = (event && event.detail) || {};
       const pin = detail.pin || '';
@@ -480,7 +472,7 @@ export function wireDispatchElement(selector) {
     el.on('updateBookingStatus', async (event) => {
       const detail = (event && event.detail) || {};
       try {
-        const res = await updateBookingStatus(detail.pin, detail.bookingId, detail.status);
+        const res = await updateBookingStatus(detail.pin, detail.bookingId, detail.status, detail.ownerNotes || '');
         if (res && res.success) {
           const [bRes, iRes] = await Promise.all([listAllBookings(detail.pin), listAllInquiries(detail.pin)]);
           el.setAttribute('dispatch-data', JSON.stringify({

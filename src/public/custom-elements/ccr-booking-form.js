@@ -166,9 +166,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       this._errors = {};
       this.render();
 
+      const clientRequestId = `REQ-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
       const event = new CustomEvent('submitBooking', {
         detail: {
-          payload: { ...this._state }
+          payload: { ...this._state, clientRequestId }
         },
         bubbles: true,
         composed: true
@@ -254,9 +255,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           </style>
           <div class="success-card">
             <div class="success-icon">✓</div>
-            <h3 style="font-size:26px;font-weight:800;color:var(--ink);">Ride Request Received</h3>
+            <h3 style="font-size:26px;font-weight:800;color:var(--ink);">Ride Request Received (Status: PENDING)</h3>
             <p style="font-size:16px;color:var(--ink);margin-top:8px;line-height:1.6;">
-              Our Seattle dispatch team has received your request and is confirming your vehicle assignment. Save your Booking ID below to search or request a confirmation update on <strong>My Bookings</strong>.
+              Your request is saved and awaiting confirmation from our Seattle dispatch team. Save your Booking Reference below to verify status anytime on <strong>My Bookings</strong>.
             </p>
             <div class="ref-box">${b.id}</div>
             <div class="summary-grid">

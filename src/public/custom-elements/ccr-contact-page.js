@@ -42,6 +42,12 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
     attributeChangedCallback(name, _oldVal, newVal) {
       if (name === 'contact-result' && newVal) {
+        try {
+          const parsed = JSON.parse(newVal);
+          this._inquiryRef = parsed.messageReference || parsed.inquiryId || '';
+        } catch (e) {
+          this._inquiryRef = '';
+        }
         this.setInquiryResult(true);
       } else if (name === 'contact-error' && newVal) {
         this.setInquiryResult(false, newVal);
@@ -232,6 +238,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                 <div style="text-align:center;padding:32px 12px;">
                   <div style="font-size:40px;color:#16a34a;margin-bottom:12px;">✓</div>
                   <h3 style="font-size:24px;font-weight:800;margin-bottom:10px;">Message Sent to Dispatch</h3>
+                  ${this._inquiryRef ? `<div style="display:inline-block;padding:6px 14px;border-radius:10px;background:#061f46;color:#f3bf28;font-weight:800;font-size:16px;margin-bottom:12px;">Reference: ${this._inquiryRef}</div>` : ''}
                   <p style="font-size:17px;color:var(--muted);margin-bottom:20px;line-height:1.6;">Thank you for contacting Cloud Comfort Ride. Our Seattle coordinator will reply shortly.</p>
                   <button class="dt-button" id="send-another">Send Another Message</button>
                 </div>

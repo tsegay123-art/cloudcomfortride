@@ -9,13 +9,15 @@ import { CCR_SHARED_CSS, dispatchCcrNavigation, ensureGoogleFonts, syncThemeHost
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrMyBookingsPage extends HTMLElement {
     static get observedAttributes() {
-      return ['server-bookings', 'confirmation-requested'];
+      return ['server-bookings', 'confirmation-requested', 'lookup-error'];
     }
 
     constructor() {
       super();
       this.attachShadow({ mode: 'open' });
       this._search = '';
+      this._verifier = '';
+      this._lookupError = '';
       this._bookings = [];
       this._voucherBooking = null;
       this._confirmNotice = '';
@@ -26,12 +28,16 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       if (name === 'server-bookings' && newVal) {
         try {
           const items = JSON.parse(newVal);
+          this._lookupError = '';
           this.setServerBookings(items);
         } catch (err) {
           // Ignore malformed server payload
         }
       } else if (name === 'confirmation-requested' && newVal) {
         this._confirmNotice = `Confirmation follow-up sent to Seattle dispatch for ${newVal}. Call (206) 327-4411 for immediate updates.`;
+        this.render();
+      } else if (name === 'lookup-error') {
+        this._lookupError = newVal || '';
         this.render();
       }
     }
@@ -173,10 +179,12 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         <section style="background:var(--surface-alt);padding:44px 0;min-height:480px;">
           <div class="container" style="max-width:960px;">
             <div class="toolbar">
-              <input class="search-input" id="search-box" type="text" placeholder="Search by Booking ID (e.g. CCR-2026-...), name, or phone..." value="${this._search}" />
-              <button class="dt-button-outline" id="search-dispatch-btn" style="min-height:48px;">🔍 Search Dispatch</button>
+              <input class="search-input" id="search-box" type="text" placeholder="Booking Reference (e.g. CCR-2026-1234)" value="${this._search}" />
+              <input class="search-input" id="verifier-box" type="text" placeholder="Your Email or Phone (to verify ownership)" value="${this._verifier}" />
+              <button class="dt-button-outline" id="search-dispatch-btn" style="min-height:48px;">🔍 Verify &amp; Find</button>
               <button class="dt-button" id="new-ride-btn">+ Book Another Ride</button>
             </div>
+            ${this._lookupError ? `<div role="alert" style="padding:14px 18px;border-radius:12px;background:#fef2f2;border:1.5px solid #dc2626;color:#991b1b;font-size:16px;font-weight:700;margin-bottom:18px;">${this._lookupError}</div>` : ''}
             ${this._confirmNotice ? `<div role="status" style="padding:14px 18px;border-radius:12px;background:#ecfdf5;border:1.5px solid #16a34a;color:#14532d;font-size:16px;font-weight:700;margin-bottom:18px;">✓ ${this._confirmNotice}</div>` : ''}
 
             ${filtered.length === 0 ? `
@@ -237,6 +245,15 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       `;
 
       const searchBox = this.shadowRoot.getElementById('search-box');
+      const verifierBox = this.shadowRoot.getElementById('verifier-box');
+      const triggerLookup = () => {
+        this._lookupError = '';
+        this.dispatchEvent(new CustomEvent('lookupBooking', {
+          detail: { bookingReference: this._search, verifier: this._verifier },
+          bubbles: true,
+          composed: true
+        }));
+      };
       if (searchBox) {
         searchBox.addEventListener('input', (e) => {
           const target = /** @type {HTMLInputElement | null} */ (e.target);
@@ -244,24 +261,21 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           this.render();
         });
         searchBox.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            this.dispatchEvent(new CustomEvent('searchBookings', {
-              detail: { query: this._search },
-              bubbles: true,
-              composed: true
-            }));
-          }
+          if (e.key === 'Enter') triggerLookup();
+        });
+      }
+      if (verifierBox) {
+        verifierBox.addEventListener('input', (e) => {
+          const target = /** @type {HTMLInputElement | null} */ (e.target);
+          this._verifier = target ? target.value : '';
+        });
+        verifierBox.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') triggerLookup();
         });
       }
       const searchDispatchBtn = this.shadowRoot.getElementById('search-dispatch-btn');
       if (searchDispatchBtn) {
-        searchDispatchBtn.addEventListener('click', () => {
-          this.dispatchEvent(new CustomEvent('searchBookings', {
-            detail: { query: this._search },
-            bubbles: true,
-            composed: true
-          }));
-        });
+        searchDispatchBtn.addEventListener('click', triggerLookup);
       }
       this.shadowRoot.getElementById('new-ride-btn').addEventListener('click', () => this._navigate('/book-a-ride'));
       const emptyBook = this.shadowRoot.getElementById('empty-book');
@@ -293,7 +307,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           const id = btn.getAttribute('data-remove');
           this._bookings = removeLocalBooking(id);
           this.dispatchEvent(new CustomEvent('removeBooking', {
-            detail: { bookingId: id },
+            detail: { bookingId: id, verifier: this._verifier },
             bubbles: true,
             composed: true
           }));

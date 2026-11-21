@@ -1,10 +1,10 @@
 import wixData from 'wix-data';
-import wixCrmBackend from 'wix-crm-backend';
 import { getSecret } from 'wix-secrets-backend';
+import { OWNER_EMAIL, sendWixOrResendNotification } from 'backend/notificationService';
 
-const INQUIRIES_COLLECTION = 'ContactInquiries';
-const OWNER_EMAIL = 'info@cloudmedicaltrans.com';
+const INQUIRIES_COLLECTION = 'ContactMessages';
 const CONTACT_OWNER_TEMPLATE_ID = 'contact_owner_notification';
+const CONTACT_CUSTOMER_TEMPLATE_ID = 'contact_customer_acknowledgement';
 
 async function verifyDispatchPin(pin) {
   let expectedPin = '';
@@ -17,7 +17,8 @@ async function verifyDispatchPin(pin) {
 }
 
 /**
- * Submit a contact/dispatch inquiry to Wix CMS 'ContactInquiries' collection.
+ * Submit a contact/dispatch inquiry to Wix CMS 'ContactMessages' collection.
+ * Fails cleanly if CMS storage fails, and logs owner/customer notifications.
  */
 export async function submitInquiry(payload) {
   if (payload && payload.website) {
@@ -26,14 +27,21 @@ export async function submitInquiry(payload) {
       message: 'Submission rejected by spam protection.'
     };
   }
-  if (!payload || !String(payload.name || '').trim() || !String(payload.email || '').trim() || !String(payload.message || '').trim()) {
+
+  const fullName = String((payload && payload.name) || '').trim();
+  const email = String((payload && payload.email) || '').trim().toLowerCase();
+  const phone = String((payload && payload.phone) || '').trim();
+  const phoneDigits = phone.replace(/\D/g, '');
+  const subject = String((payload && payload.subject) || 'General Inquiry / Medical Transport').trim();
+  const message = String((payload && payload.message) || '').trim();
+
+  if (!fullName || !email || !message) {
     return {
       success: false,
-      message: 'Please fill in your name, email address, and message.'
+      message: 'Please fill in your full name, email address, and message.'
     };
   }
 
-  const email = String(payload.email).trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return {
       success: false,
@@ -41,54 +49,127 @@ export async function submitInquiry(payload) {
     };
   }
 
-  const inquiryId = `INQ-${Date.now()}`;
-  const record = {
-    inquiryId,
-    name: String(payload.name).trim(),
-    email: email.toLowerCase(),
-    phone: String(payload.phone || '').trim(),
-    subject: String(payload.subject || 'General Inquiry / Medical Transport').trim(),
-    message: String(payload.message).trim(),
-    createdAt: new Date().toISOString(),
-    status: 'new'
-  };
-
-  let persistedToCms = false;
-  try {
-    await wixData.insert(INQUIRIES_COLLECTION, record, { suppressAuth: true });
-    persistedToCms = true;
-  } catch (err) {
-    console.warn('ContactInquiries CMS insert skipped or unavailable:', err && err.message ? err.message : err);
+  if (phone && phoneDigits.length < 10) {
+    return {
+      success: false,
+      message: 'Please provide a valid 10-digit telephone number.'
+    };
   }
 
-  let ownerNotified = false;
+  // Duplicate submission guard (within last 5 minutes)
   try {
-    const ownerRes = await wixCrmBackend.contacts.appendOrCreateContact({
-      emails: [{ email: OWNER_EMAIL, primary: true }],
-      name: { first: 'Cloud Comfort Ride', last: 'Dispatch' }
-    });
-    if (ownerRes && ownerRes.contactId) {
-      await wixCrmBackend.triggeredEmails.emailContact(CONTACT_OWNER_TEMPLATE_ID, ownerRes.contactId, {
-        variables: {
-          inquiryId: record.inquiryId,
-          name: record.name,
-          email: record.email,
-          phone: record.phone || 'Not provided',
-          subject: record.subject,
-          message: record.message
-        }
-      });
-      ownerNotified = true;
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const existing = await wixData.query(INQUIRIES_COLLECTION)
+      .eq('email', email)
+      .eq('message', message)
+      .ge('submissionDate', fiveMinAgo)
+      .limit(1)
+      .find({ suppressAuth: true });
+    if (existing.items && existing.items.length > 0) {
+      return {
+        success: false,
+        duplicate: true,
+        message: `We already received this message (Reference: ${existing.items[0].messageReference}). Our team will reply shortly.`
+      };
     }
+  } catch (e) {
+    // Proceed to insert
+  }
+
+  const nameParts = fullName.split(/\s+/);
+  const firstName = nameParts[0] || fullName;
+  const lastName = nameParts.slice(1).join(' ') || '-';
+  const messageReference = `MSG-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const nowIso = new Date().toISOString();
+
+  const record = {
+    messageReference,
+    inquiryId: messageReference,
+    firstName,
+    lastName,
+    name: fullName,
+    email,
+    phone,
+    subject,
+    message,
+    submissionDate: nowIso,
+    createdAt: nowIso,
+    messageStatus: 'NEW',
+    status: 'NEW',
+    notificationStatus: 'PENDING'
+  };
+
+  let insertedItem = null;
+  try {
+    insertedItem = await wixData.insert(INQUIRIES_COLLECTION, record, { suppressAuth: true });
   } catch (err) {
-    console.warn('Contact owner triggered email skipped:', err && err.message ? err.message : err);
+    console.error('ContactMessages CMS insert failed:', err && err.message ? err.message : err);
+    return {
+      success: false,
+      persistedToCms: false,
+      message: 'Unable to save your message to the dispatch database. Please call (206) 327-4411.'
+    };
+  }
+
+  const vars = {
+    inquiryId: messageReference,
+    messageReference,
+    name: fullName,
+    email,
+    phone: phone || 'Not provided',
+    subject,
+    message
+  };
+
+  const [ownerResult, customerResult] = await Promise.all([
+    sendWixOrResendNotification({
+      relatedRecordReference: messageReference,
+      notificationType: 'OWNER_CONTACT_NOTIFICATION',
+      recipientEmail: OWNER_EMAIL,
+      recipientFirstName: 'Cloud Comfort Ride',
+      recipientLastName: 'Dispatch',
+      triggeredEmailId: CONTACT_OWNER_TEMPLATE_ID,
+      variables: vars,
+      fallbackSubject: `New Contact Inquiry (${messageReference}) — ${fullName}`,
+      fallbackHtml: `<p><strong>Ref:</strong> ${messageReference}</p><p><strong>From:</strong> ${fullName} (${email}, ${phone || 'No phone'})</p><p><strong>Topic:</strong> ${subject}</p><p>${message}</p>`
+    }),
+    sendWixOrResendNotification({
+      relatedRecordReference: messageReference,
+      notificationType: 'CUSTOMER_CONTACT_ACKNOWLEDGEMENT',
+      recipientEmail: email,
+      recipientFirstName: firstName,
+      recipientLastName: lastName,
+      recipientPhone: phone,
+      triggeredEmailId: CONTACT_CUSTOMER_TEMPLATE_ID,
+      variables: vars,
+      fallbackSubject: `We received your message (${messageReference}) — Cloud Comfort Ride`,
+      fallbackHtml: `<p>Hi ${firstName},</p><p>Thank you for contacting Cloud Comfort Ride. Your inquiry reference is <strong>${messageReference}</strong>. Our Seattle team will respond shortly.</p>`
+    })
+  ]);
+
+  const notificationStatus = ownerResult.delivered && customerResult.delivered
+    ? 'SENT'
+    : (ownerResult.delivered || customerResult.delivered ? 'PARTIAL' : 'FAILED');
+
+  try {
+    await wixData.update(INQUIRIES_COLLECTION, {
+      ...insertedItem,
+      notificationStatus
+    }, { suppressAuth: true });
+  } catch (e) {
+    // Non-fatal
   }
 
   return {
     success: true,
-    persistedToCms,
-    ownerNotified,
-    inquiry: record
+    persistedToCms: true,
+    ownerNotified: ownerResult.delivered,
+    customerNotified: customerResult.delivered,
+    notificationStatus,
+    inquiry: {
+      ...record,
+      notificationStatus
+    }
   };
 }
 
@@ -99,33 +180,37 @@ export async function listAllInquiries(pin) {
   }
   try {
     const res = await wixData.query(INQUIRIES_COLLECTION)
-      .descending('createdAt')
+      .descending('submissionDate')
       .limit(100)
       .find({ suppressAuth: true });
     return { success: true, items: res.items || [] };
   } catch (err) {
-    return { success: false, items: [], message: 'ContactInquiries CMS collection not yet provisioned.' };
+    return { success: false, items: [], message: 'ContactMessages CMS collection not yet provisioned.' };
   }
 }
 
-export async function resolveInquiry(pin, inquiryId) {
+export async function resolveInquiry(pin, messageReference) {
   const ok = await verifyDispatchPin(pin);
   if (!ok) {
     return { success: false, message: 'Invalid Dispatch PIN.' };
   }
   try {
     const res = await wixData.query(INQUIRIES_COLLECTION)
-      .eq('inquiryId', String(inquiryId).trim())
+      .eq('messageReference', String(messageReference).trim())
       .limit(1)
       .find({ suppressAuth: true });
     if (!res.items || res.items.length === 0) {
       return { success: false, message: 'Inquiry not found.' };
     }
-    const updated = { ...res.items[0], status: 'resolved', updatedAt: new Date().toISOString() };
+    const updated = {
+      ...res.items[0],
+      messageStatus: 'RESOLVED',
+      status: 'RESOLVED',
+      updatedAt: new Date().toISOString()
+    };
     await wixData.update(INQUIRIES_COLLECTION, updated, { suppressAuth: true });
     return { success: true, inquiry: updated };
   } catch (err) {
     return { success: false, message: 'Unable to update inquiry.' };
   }
 }
-

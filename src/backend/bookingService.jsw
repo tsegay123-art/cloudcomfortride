@@ -1,10 +1,9 @@
 import wixData from 'wix-data';
-import wixCrmBackend from 'wix-crm-backend';
 import { getSecret } from 'wix-secrets-backend';
 import { getServiceTitle } from 'public/companyData';
+import { OWNER_EMAIL, sendWixOrResendNotification } from 'backend/notificationService';
 
 const BOOKINGS_COLLECTION = 'Bookings';
-const OWNER_EMAIL = 'info@cloudmedicaltrans.com';
 const OWNER_EMAIL_TEMPLATE_ID = 'booking_owner_notification';
 const CUSTOMER_EMAIL_TEMPLATE_ID = 'booking_customer_confirmation';
 
@@ -13,7 +12,6 @@ async function verifyDispatchPin(pin) {
   try {
     expectedPin = await getSecret('CCR_DISPATCH_PIN');
   } catch (e) {
-    // Secret not provisioned yet; require setup or fallback to site-owner default
     expectedPin = '2023';
   }
   return Boolean(pin && String(pin).trim() === String(expectedPin).trim());
@@ -53,8 +51,8 @@ function validateServerBooking(data) {
 }
 
 /**
- * Submit a new non-emergency medical transportation booking request.
- * Persists to Wix CMS 'Bookings' collection when available.
+ * Submit a new transportation booking request.
+ * Stores in Wix CMS 'Bookings' with status PENDING and logs owner/customer notifications.
  */
 export async function submitBooking(payload) {
   if (payload && payload.website) {
@@ -64,6 +62,7 @@ export async function submitBooking(payload) {
       message: 'Submission rejected by spam protection.'
     };
   }
+
   const validation = validateServerBooking(payload);
   if (!validation.isValid) {
     return {
@@ -73,51 +72,101 @@ export async function submitBooking(payload) {
     };
   }
 
+  const firstName = String(payload.firstName).trim();
+  const lastName = String(payload.lastName).trim();
+  const email = String(payload.email).trim().toLowerCase();
+  const phone = String(payload.phone).trim();
+  const pickupDate = String(payload.pickupDate);
+  const pickupTime = String(payload.pickupTime);
+  const destinationAddress = String(payload.destinationAddress).trim();
+  const clientRequestId = String(payload.clientRequestId || '').trim();
+
+  // Duplicate submission guard (within last 5 minutes)
+  try {
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const dupQuery = clientRequestId
+      ? wixData.query(BOOKINGS_COLLECTION).eq('clientRequestId', clientRequestId)
+      : wixData.query(BOOKINGS_COLLECTION)
+        .eq('email', email)
+        .eq('pickupDate', pickupDate)
+        .eq('pickupTime', pickupTime)
+        .eq('destinationAddress', destinationAddress)
+        .ge('submissionDate', fiveMinAgo);
+
+    const existing = await dupQuery.limit(1).find({ suppressAuth: true });
+    if (existing.items && existing.items.length > 0) {
+      const ref = existing.items[0].bookingReference || existing.items[0].bookingId;
+      return {
+        success: false,
+        duplicate: true,
+        message: `A booking request for this trip was already received (Reference: ${ref}). View it in My Bookings or call (206) 327-4411.`
+      };
+    }
+  } catch (e) {
+    // Proceed to insert; insert itself will fail cleanly if Bookings collection does not exist
+  }
+
   const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-  const bookingId = `CCR-${new Date().getFullYear()}-${randomSuffix}`;
+  const bookingReference = `CCR-${new Date().getFullYear()}-${randomSuffix}`;
   const nowIso = new Date().toISOString();
+  const serviceTitle = getServiceTitle(String(payload.serviceType));
 
   const record = {
-    bookingId,
-    id: bookingId,
+    bookingReference,
+    bookingId: bookingReference,
+    id: bookingReference,
+    clientRequestId,
+    submissionDate: nowIso,
     createdAt: nowIso,
-    status: 'pending_review',
+    bookingStatus: 'PENDING',
+    status: 'PENDING',
+    firstName,
+    lastName,
+    passengerName: `${firstName} ${lastName}`,
+    email,
+    passengerEmail: email,
+    phone,
+    passengerPhone: phone,
     serviceType: String(payload.serviceType),
-    serviceTitle: getServiceTitle(String(payload.serviceType)),
+    serviceTitle,
     vehiclePreference: String(payload.vehiclePreference || 'best_match'),
     tripType: payload.tripType === 'one_way' ? 'one_way' : 'round_trip',
-    pickupDate: String(payload.pickupDate),
-    pickupTime: String(payload.pickupTime),
+    pickupDate,
+    pickupTime,
     returnTime: payload.tripType === 'round_trip' ? String(payload.returnTime || '') : '',
     pickupAddress: String(payload.pickupAddress).trim(),
     pickupNotes: String(payload.pickupNotes || '').trim(),
-    destinationAddress: String(payload.destinationAddress).trim(),
     facilityName: String(payload.facilityName || '').trim(),
+    destinationAddress,
+    department: String(payload.destinationNotes || '').trim(),
     destinationNotes: String(payload.destinationNotes || '').trim(),
-    passengerName: `${String(payload.firstName).trim()} ${String(payload.lastName).trim()}`,
-    passengerPhone: String(payload.phone).trim(),
-    passengerEmail: String(payload.email).trim().toLowerCase(),
+    mobilityRequirement: String(payload.mobilityNeed || 'ambulatory'),
     mobilityNeed: String(payload.mobilityNeed || 'ambulatory'),
+    companionRequired: Boolean(payload.hasCompanion),
     hasCompanion: Boolean(payload.hasCompanion),
     companionCount: payload.hasCompanion ? Number(payload.companionCount || 1) : 0,
     hasStairs: Boolean(payload.hasStairs),
-    specialInstructions: String(payload.specialInstructions || '').trim()
+    specialInstructions: String(payload.specialInstructions || '').trim(),
+    ownerNotes: '',
+    notificationStatus: 'PENDING'
   };
 
-  let persistedToCms = false;
+  let insertedItem = null;
   try {
-    await wixData.insert(BOOKINGS_COLLECTION, record, { suppressAuth: true });
-    persistedToCms = true;
+    insertedItem = await wixData.insert(BOOKINGS_COLLECTION, record, { suppressAuth: true });
   } catch (err) {
-    // Collection may not be provisioned in Wix CMS yet; return booking cleanly with persistedToCms=false
-    console.warn('Bookings CMS insert skipped or unavailable:', err && err.message ? err.message : err);
+    console.error('Bookings CMS insert failed:', err && err.message ? err.message : err);
+    return {
+      success: false,
+      persistedToCms: false,
+      message: 'Unable to store your booking in the dispatch database. Please call (206) 327-4411 so we can assist you immediately.'
+    };
   }
 
-  let ownerNotified = false;
-  let customerNotified = false;
   const emailVars = {
-    bookingId: record.bookingId,
-    serviceTitle: record.serviceTitle,
+    bookingId: bookingReference,
+    bookingReference,
+    serviceTitle,
     vehiclePreference: record.vehiclePreference,
     tripType: record.tripType === 'round_trip' ? 'Round Trip' : 'One-Way',
     pickupDate: record.pickupDate,
@@ -127,150 +176,202 @@ export async function submitBooking(payload) {
     pickupNotes: record.pickupNotes || 'None',
     facilityName: record.facilityName || 'N/A',
     destinationAddress: record.destinationAddress,
-    destinationNotes: record.destinationNotes || 'None',
+    destinationNotes: record.department || 'None',
     passengerName: record.passengerName,
-    passengerPhone: record.passengerPhone,
-    passengerEmail: record.passengerEmail,
-    mobilityNeed: record.mobilityNeed,
+    passengerPhone: record.phone,
+    passengerEmail: record.email,
+    mobilityNeed: record.mobilityRequirement,
     companions: record.hasCompanion ? String(record.companionCount) : '0',
     stairs: record.hasStairs ? 'Yes' : 'No',
-    specialInstructions: record.specialInstructions || 'None'
+    specialInstructions: record.specialInstructions || 'None',
+    bookingStatus: 'PENDING'
   };
 
-  try {
-    const ownerRes = await wixCrmBackend.contacts.appendOrCreateContact({
-      emails: [{ email: OWNER_EMAIL, primary: true }],
-      name: { first: 'Cloud Comfort Ride', last: 'Dispatch' }
-    });
-    const ownerContactId = ownerRes && ownerRes.contactId;
-    if (ownerContactId) {
-      await wixCrmBackend.triggeredEmails.emailContact(OWNER_EMAIL_TEMPLATE_ID, ownerContactId, {
-        variables: emailVars
-      });
-      ownerNotified = true;
-    }
-  } catch (err) {
-    console.warn('Owner triggered email skipped (configure booking_owner_notification in Wix Dashboard):', err && err.message ? err.message : err);
-  }
+  const ownerHtml = `
+    <h2>New Cloud Comfort Ride Booking Request (${bookingReference})</h2>
+    <p><strong>Status:</strong> PENDING CONFIRMATION</p>
+    <p><strong>Passenger:</strong> ${record.passengerName} | <strong>Phone:</strong> ${record.phone} | <strong>Email:</strong> ${record.email}</p>
+    <p><strong>Service:</strong> ${serviceTitle} (${emailVars.tripType}) | <strong>Vehicle:</strong> ${record.vehiclePreference}</p>
+    <p><strong>Pickup:</strong> ${record.pickupDate} at ${record.pickupTime} — ${record.pickupAddress} (Notes: ${emailVars.pickupNotes})</p>
+    <p><strong>Destination:</strong> ${record.facilityName ? `${record.facilityName} — ` : ''}${record.destinationAddress} (${emailVars.destinationNotes})</p>
+    <p><strong>Mobility:</strong> ${record.mobilityRequirement} | <strong>Companions:</strong> ${emailVars.companions} | <strong>Stairs:</strong> ${emailVars.stairs}</p>
+    <p><strong>Special Instructions:</strong> ${emailVars.specialInstructions}</p>
+    <p>Manage &amp; Confirm in Owner Dispatch: https://www.cloudcomfortride.com/owner-dispatch</p>
+  `;
+
+  const customerHtml = `
+    <h2>Thank you for your ride request, ${firstName}!</h2>
+    <p>Your Cloud Comfort Ride booking request (<strong>${bookingReference}</strong>) has been received and is currently <strong>PENDING</strong> dispatch confirmation.</p>
+    <p><strong>Service:</strong> ${serviceTitle}<br/><strong>Pickup:</strong> ${record.pickupDate} at ${record.pickupTime} from ${record.pickupAddress}<br/><strong>Destination:</strong> ${record.destinationAddress}</p>
+    <p>Our Seattle dispatch team will contact you shortly to confirm your vehicle assignment. For immediate updates, call (206) 327-4411.</p>
+  `;
+
+  const [ownerResult, customerResult] = await Promise.all([
+    sendWixOrResendNotification({
+      relatedRecordReference: bookingReference,
+      notificationType: 'OWNER_BOOKING_NOTIFICATION',
+      recipientEmail: OWNER_EMAIL,
+      recipientFirstName: 'Cloud Comfort Ride',
+      recipientLastName: 'Dispatch',
+      triggeredEmailId: OWNER_EMAIL_TEMPLATE_ID,
+      variables: emailVars,
+      fallbackSubject: `New Booking Request ${bookingReference} — ${record.passengerName}`,
+      fallbackHtml: ownerHtml
+    }),
+    sendWixOrResendNotification({
+      relatedRecordReference: bookingReference,
+      notificationType: 'CUSTOMER_BOOKING_ACKNOWLEDGEMENT',
+      recipientEmail: record.email,
+      recipientFirstName: firstName,
+      recipientLastName: lastName,
+      recipientPhone: record.phone,
+      triggeredEmailId: CUSTOMER_EMAIL_TEMPLATE_ID,
+      variables: emailVars,
+      fallbackSubject: `Cloud Comfort Ride Request Received (${bookingReference})`,
+      fallbackHtml: customerHtml
+    })
+  ]);
+
+  const notificationStatus = ownerResult.delivered && customerResult.delivered
+    ? 'SENT'
+    : (ownerResult.delivered || customerResult.delivered ? 'PARTIAL' : 'FAILED');
 
   try {
-    const custRes = await wixCrmBackend.contacts.appendOrCreateContact({
-      emails: [{ email: record.passengerEmail, primary: true }],
-      phones: [{ phone: record.passengerPhone, primary: true }],
-      name: { first: String(payload.firstName).trim(), last: String(payload.lastName).trim() }
-    });
-    const custContactId = custRes && custRes.contactId;
-    if (custContactId) {
-      await wixCrmBackend.triggeredEmails.emailContact(CUSTOMER_EMAIL_TEMPLATE_ID, custContactId, {
-        variables: emailVars
-      });
-      customerNotified = true;
-    }
-  } catch (err) {
-    console.warn('Customer triggered email skipped (configure booking_customer_confirmation in Wix Dashboard):', err && err.message ? err.message : err);
+    await wixData.update(BOOKINGS_COLLECTION, {
+      ...insertedItem,
+      notificationStatus
+    }, { suppressAuth: true });
+  } catch (e) {
+    // Non-fatal update error
   }
 
   return {
     success: true,
-    persistedToCms,
-    ownerNotified,
-    customerNotified,
-    booking: record
+    persistedToCms: true,
+    ownerNotified: ownerResult.delivered,
+    customerNotified: customerResult.delivered,
+    notificationStatus,
+    booking: {
+      ...record,
+      notificationStatus
+    }
   };
 }
 
 /**
- * Search bookings from Wix CMS 'Bookings' collection by bookingId, phone, or email.
+ * Verified customer booking lookup: requires BOTH bookingReference AND matching email or phone.
  */
-export async function searchBookings(queryText) {
-  const q = String(queryText || '').trim();
-  if (!q) {
-    return { success: true, items: [], source: 'cms' };
-  }
-
-  try {
-    const byId = wixData.query(BOOKINGS_COLLECTION).contains('bookingId', q);
-    const byName = wixData.query(BOOKINGS_COLLECTION).contains('passengerName', q);
-    const byPhone = wixData.query(BOOKINGS_COLLECTION).contains('passengerPhone', q);
-    const byEmail = wixData.query(BOOKINGS_COLLECTION).contains('passengerEmail', q.toLowerCase());
-
-    const result = await byId
-      .or(byName)
-      .or(byPhone)
-      .or(byEmail)
-      .descending('createdAt')
-      .limit(50)
-      .find({ suppressAuth: true });
-
-    return {
-      success: true,
-      items: result.items || [],
-      source: 'cms'
-    };
-  } catch (err) {
+export async function lookupVerifiedBooking(bookingReference, verifier) {
+  const ref = String(bookingReference || '').trim().toUpperCase();
+  const check = String(verifier || '').trim();
+  if (!ref || !check) {
     return {
       success: false,
       items: [],
-      source: 'local_fallback',
-      message: 'CMS collection not yet provisioned'
+      message: 'Please enter both your Booking Reference and your Email or Phone number.'
     };
-  }
-}
-
-/**
- * Remove or mark a booking as cancelled in Wix CMS 'Bookings' collection.
- */
-export async function cancelBooking(bookingId) {
-  const id = String(bookingId || '').trim();
-  if (!id) {
-    return { success: false, message: 'Booking ID is required' };
   }
 
   try {
     const res = await wixData.query(BOOKINGS_COLLECTION)
-      .eq('bookingId', id)
-      .limit(1)
+      .eq('bookingReference', ref)
+      .limit(5)
       .find({ suppressAuth: true });
 
-    if (res.items && res.items.length > 0) {
-      const item = res.items[0];
-      await wixData.update(BOOKINGS_COLLECTION, { ...item, status: 'cancelled' }, { suppressAuth: true });
-      return { success: true, bookingId: id };
+    const checkLower = check.toLowerCase();
+    const checkDigits = check.replace(/\D/g, '');
+
+    const matched = (res.items || []).filter((item) => {
+      const itemEmail = String(item.email || item.passengerEmail || '').toLowerCase();
+      const itemDigits = String(item.phone || item.passengerPhone || '').replace(/\D/g, '');
+      const emailMatch = itemEmail && itemEmail === checkLower;
+      const phoneMatch = checkDigits.length >= 4 && itemDigits && (itemDigits === checkDigits || itemDigits.endsWith(checkDigits));
+      return emailMatch || phoneMatch;
+    });
+
+    if (!matched.length) {
+      return {
+        success: false,
+        items: [],
+        message: 'No booking matched that Reference and Email/Phone combination.'
+      };
     }
-    return { success: true, bookingId: id, message: 'Booking not found in CMS' };
+
+    return { success: true, items: matched };
   } catch (err) {
-    return { success: false, message: 'CMS collection not yet provisioned' };
+    return {
+      success: false,
+      items: [],
+      message: 'Unable to reach booking lookup service. Please call (206) 327-4411.'
+    };
   }
 }
 
 /**
- * Request confirmation follow-up from dispatch for an existing booking ID.
+ * Cancel a verified booking from My Bookings.
  */
-export async function requestBookingConfirmation(bookingId) {
-  const id = String(bookingId || '').trim();
-  if (!id) {
-    return { success: false, message: 'Booking ID is required' };
-  }
+export async function cancelBooking(bookingReference, verifier = '') {
+  const ref = String(bookingReference || '').trim().toUpperCase();
+  if (!ref) return { success: false, message: 'Booking reference is required.' };
 
   try {
-    const ownerRes = await wixCrmBackend.contacts.appendOrCreateContact({
-      emails: [{ email: OWNER_EMAIL, primary: true }],
-      name: { first: 'Cloud Comfort Ride', last: 'Dispatch' }
-    });
-    if (ownerRes && ownerRes.contactId) {
-      await wixCrmBackend.triggeredEmails.emailContact(OWNER_EMAIL_TEMPLATE_ID, ownerRes.contactId, {
-        variables: {
-          bookingId: id,
-          serviceTitle: 'Confirmation Follow-Up Requested by Passenger',
-          specialInstructions: `Passenger requested confirmation update for booking ${id} via My Bookings.`
-        }
-      });
-    }
-  } catch (err) {
-    // Ignore if triggered email template is not provisioned yet
-  }
+    const res = await wixData.query(BOOKINGS_COLLECTION)
+      .eq('bookingReference', ref)
+      .limit(1)
+      .find({ suppressAuth: true });
 
-  return { success: true, bookingId: id };
+    if (!res.items || !res.items.length) {
+      return { success: false, message: 'Booking not found.' };
+    }
+    const item = res.items[0];
+    if (verifier) {
+      const vLower = String(verifier).trim().toLowerCase();
+      const vDigits = String(verifier).replace(/\D/g, '');
+      const emailMatch = String(item.email || item.passengerEmail || '').toLowerCase() === vLower;
+      const phoneMatch = vDigits.length >= 4 && String(item.phone || item.passengerPhone || '').replace(/\D/g, '').endsWith(vDigits);
+      if (!emailMatch && !phoneMatch) {
+        return { success: false, message: 'Verification failed for this booking.' };
+      }
+    }
+
+    await wixData.update(BOOKINGS_COLLECTION, {
+      ...item,
+      bookingStatus: 'CANCELLED',
+      status: 'CANCELLED',
+      updatedAt: new Date().toISOString()
+    }, { suppressAuth: true });
+
+    return { success: true, bookingReference: ref };
+  } catch (err) {
+    return { success: false, message: 'Unable to cancel booking in database.' };
+  }
+}
+
+/**
+ * Request confirmation follow-up from dispatch for a verified booking.
+ */
+export async function requestBookingConfirmation(bookingReference) {
+  const ref = String(bookingReference || '').trim().toUpperCase();
+  if (!ref) return { success: false, message: 'Booking Reference is required' };
+
+  const notifyRes = await sendWixOrResendNotification({
+    relatedRecordReference: ref,
+    notificationType: 'OWNER_CONFIRMATION_FOLLOWUP',
+    recipientEmail: OWNER_EMAIL,
+    recipientFirstName: 'Cloud Comfort Ride',
+    recipientLastName: 'Dispatch',
+    triggeredEmailId: OWNER_EMAIL_TEMPLATE_ID,
+    variables: {
+      bookingId: ref,
+      bookingReference: ref,
+      serviceTitle: 'Confirmation Follow-Up Requested by Passenger',
+      specialInstructions: `Passenger requested confirmation update for booking ${ref} via My Bookings.`
+    },
+    fallbackSubject: `Confirmation Follow-Up Requested: ${ref}`,
+    fallbackHtml: `<p>Passenger requested an immediate confirmation update for booking <strong>${ref}</strong>.</p>`
+  });
+
+  return { success: true, bookingReference: ref, ownerNotified: notifyRes.delivered };
 }
 
 /**
@@ -284,7 +385,7 @@ export async function listAllBookings(pin) {
 
   try {
     const res = await wixData.query(BOOKINGS_COLLECTION)
-      .descending('createdAt')
+      .descending('submissionDate')
       .limit(100)
       .find({ suppressAuth: true });
     return { success: true, items: res.items || [] };
@@ -294,22 +395,23 @@ export async function listAllBookings(pin) {
 }
 
 /**
- * Owner Dispatch: approve ('confirmed') or cancel ('cancelled') a booking and notify customer.
+ * Owner Dispatch: update booking status ('CONFIRMED', 'REJECTED', 'CANCELLED', 'PENDING') + ownerNotes.
  */
-export async function updateBookingStatus(pin, bookingId, nextStatus) {
+export async function updateBookingStatus(pin, bookingReference, nextStatus, ownerNotes = '') {
   const ok = await verifyDispatchPin(pin);
   if (!ok) {
     return { success: false, message: 'Invalid Dispatch PIN.' };
   }
 
-  const allowed = ['confirmed', 'cancelled', 'pending_review'];
-  if (!allowed.includes(nextStatus)) {
-    return { success: false, message: 'Invalid status.' };
+  const normalized = String(nextStatus || '').toUpperCase();
+  const allowed = ['CONFIRMED', 'REJECTED', 'CANCELLED', 'PENDING'];
+  if (!allowed.includes(normalized)) {
+    return { success: false, message: 'Invalid booking status.' };
   }
 
   try {
     const res = await wixData.query(BOOKINGS_COLLECTION)
-      .eq('bookingId', String(bookingId).trim())
+      .eq('bookingReference', String(bookingReference).trim())
       .limit(1)
       .find({ suppressAuth: true });
 
@@ -317,35 +419,40 @@ export async function updateBookingStatus(pin, bookingId, nextStatus) {
       return { success: false, message: 'Booking not found in CMS.' };
     }
 
+    const current = res.items[0];
     const updated = {
-      ...res.items[0],
-      status: nextStatus,
+      ...current,
+      bookingStatus: normalized,
+      status: normalized,
+      ownerNotes: ownerNotes !== undefined ? String(ownerNotes).trim() : (current.ownerNotes || ''),
       updatedAt: new Date().toISOString()
     };
     await wixData.update(BOOKINGS_COLLECTION, updated, { suppressAuth: true });
 
-    if (nextStatus === 'confirmed' && updated.passengerEmail) {
-      try {
-        const custRes = await wixCrmBackend.contacts.appendOrCreateContact({
-          emails: [{ email: updated.passengerEmail, primary: true }]
-        });
-        if (custRes && custRes.contactId) {
-          await wixCrmBackend.triggeredEmails.emailContact(CUSTOMER_EMAIL_TEMPLATE_ID, custRes.contactId, {
-            variables: {
-              bookingId: updated.bookingId,
-              serviceTitle: updated.serviceTitle || getServiceTitle(updated.serviceType),
-              pickupDate: updated.pickupDate,
-              pickupTime: updated.pickupTime,
-              pickupAddress: updated.pickupAddress,
-              destinationAddress: updated.destinationAddress,
-              passengerName: updated.passengerName,
-              specialInstructions: `Status: CONFIRMED by Cloud Comfort Ride Dispatch.`
-            }
-          });
-        }
-      } catch (e) {
-        // Triggered email optional
-      }
+    const customerEmail = updated.email || updated.passengerEmail;
+    if ((normalized === 'CONFIRMED' || normalized === 'REJECTED') && customerEmail) {
+      await sendWixOrResendNotification({
+        relatedRecordReference: updated.bookingReference,
+        notificationType: `CUSTOMER_STATUS_${normalized}`,
+        recipientEmail: customerEmail,
+        recipientFirstName: updated.firstName || 'Passenger',
+        recipientLastName: updated.lastName || '',
+        triggeredEmailId: CUSTOMER_EMAIL_TEMPLATE_ID,
+        variables: {
+          bookingId: updated.bookingReference,
+          bookingReference: updated.bookingReference,
+          serviceTitle: updated.serviceTitle || getServiceTitle(updated.serviceType),
+          pickupDate: updated.pickupDate,
+          pickupTime: updated.pickupTime,
+          pickupAddress: updated.pickupAddress,
+          destinationAddress: updated.destinationAddress,
+          passengerName: updated.passengerName,
+          bookingStatus: normalized,
+          specialInstructions: `Status: ${normalized}${updated.ownerNotes ? ` — ${updated.ownerNotes}` : ''}`
+        },
+        fallbackSubject: `Cloud Comfort Ride Booking ${normalized} (${updated.bookingReference})`,
+        fallbackHtml: `<p>Your Cloud Comfort Ride booking <strong>${updated.bookingReference}</strong> is now <strong>${normalized}</strong>.</p><p>${updated.ownerNotes || ''}</p>`
+      });
     }
 
     return { success: true, booking: updated };
@@ -353,4 +460,3 @@ export async function updateBookingStatus(pin, bookingId, nextStatus) {
     return { success: false, message: 'Unable to update booking status.' };
   }
 }
-

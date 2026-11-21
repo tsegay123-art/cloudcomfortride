@@ -19,7 +19,7 @@
         "siteMember": { "invoke": true },
         "anonymous": { "invoke": true }
       },
-      "searchBookings": {
+      "lookupVerifiedBooking": {
         "siteOwner": { "invoke": true },
         "siteMember": { "invoke": true },
         "anonymous": { "invoke": true }
