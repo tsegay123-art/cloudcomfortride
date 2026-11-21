@@ -104,8 +104,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         { label: 'Home', path: '/', aliases: ['/'] },
         { label: 'Services', path: '/services', aliases: ['/services'] },
         { label: 'About Us', path: '/about', aliases: ['/about', '/about-us'] },
-        { label: 'Fleet & Safety', path: '/safety-drivers', aliases: ['/safety-drivers', '/why-cloud-medical', '/fleet'] },
-        { label: 'Contact', path: '/contact', aliases: ['/contact', '/contact-us'] },
+        { label: 'Why Cloud Comfort Ride', path: '/safety-drivers', aliases: ['/safety-drivers', '/why-cloud-comfort-ride', '/why-cloud-medical'] },
+        { label: 'Fleet', path: '/fleet', aliases: ['/fleet'] },
+        { label: 'Contact Us', path: '/contact', aliases: ['/contact', '/contact-us'] },
         { label: 'My Bookings', path: '/my-bookings', aliases: ['/my-bookings', '/my-booking'], badge: bookingCount > 0 ? bookingCount : null }
       ];
       const isLinkActive = (link) => link.aliases.includes(currentPath);
@@ -223,13 +224,16 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .desktop-nav {
             display: none;
             align-items: center;
-            gap: 18px;
-            font-size: 16px;
+            gap: 12px;
+            font-size: 15px;
             font-weight: 700;
           }
-          @media (min-width: 1024px) {
+          @media (min-width: 1120px) {
             .desktop-nav { display: flex; }
             .mobile-actions { display: none !important; }
+          }
+          @media (min-width: 1280px) {
+            .desktop-nav { gap: 18px; font-size: 16px; }
           }
           .nav-link, .mobile-link, .brand, .icon-btn, .book-pill {
             touch-action: manipulation;
@@ -240,7 +244,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             border: none;
             color: var(--ink);
             font-weight: 700;
-            font-size: 16px;
+            font-size: inherit;
             padding: 8px 2px;
             min-height: 44px;
             display: inline-flex;

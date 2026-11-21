@@ -13,9 +13,10 @@ const ROUTE_ALIASES = {
   '/about': { urls: ['/about', '/about-us'], names: ['about us', 'about'] },
   '/about-us': { urls: ['/about', '/about-us'], names: ['about us', 'about'] },
   '/services': { urls: ['/services'], names: ['services'] },
-  '/safety-drivers': { urls: ['/safety-drivers', '/why-cloud-medical', '/why-cloud-comfort-ride', '/fleet'], names: ['why cloud comfort ride', 'why cloud medical', 'fleet', 'safety'] },
-  '/fleet': { urls: ['/safety-drivers', '/why-cloud-medical', '/why-cloud-comfort-ride', '/fleet'], names: ['why cloud comfort ride', 'why cloud medical', 'fleet', 'safety'] },
-  '/why-cloud-medical': { urls: ['/safety-drivers', '/why-cloud-medical', '/why-cloud-comfort-ride', '/fleet'], names: ['why cloud comfort ride', 'why cloud medical', 'fleet', 'safety'] },
+  '/safety-drivers': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
+  '/why-cloud-comfort-ride': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
+  '/fleet': { urls: ['/fleet', '/why-cloud-comfort-ride', '/safety-drivers'], names: ['fleet', 'why cloud comfort ride', 'why cloud medical'] },
+  '/why-cloud-medical': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
   '/book-a-ride': { urls: ['/book-a-ride', '/book-online', '/book-ride'], names: ['book a ride', 'book online', 'book ride', 'schedule'] },
   '/book-online': { urls: ['/book-a-ride', '/book-online', '/book-ride'], names: ['book a ride', 'book online', 'book ride', 'schedule'] },
   '/my-bookings': { urls: ['/my-bookings', '/my-booking'], names: ['my bookings', 'my booking'] },
@@ -69,12 +70,111 @@ function resolveWixRoute(requestedPath) {
 }
 
 function buildRouteMap() {
-  const keys = ['/', '/services', '/about', '/safety-drivers', '/book-a-ride', '/my-bookings', '/contact', '/privacy', '/terms', '/accessibility'];
+  const keys = ['/', '/services', '/about', '/safety-drivers', '/fleet', '/book-a-ride', '/my-bookings', '/contact', '/privacy', '/terms', '/accessibility', '/owner-dispatch'];
   const map = {};
   keys.forEach((k) => {
     map[k] = resolveWixRoute(k);
   });
   return map;
+}
+
+const wiredHandlerRegistry = new WeakMap();
+
+function markWired(el, eventName) {
+  if (!el) return false;
+  let set = wiredHandlerRegistry.get(el);
+  if (!set) {
+    set = new Set();
+    wiredHandlerRegistry.set(el, set);
+  }
+  if (set.has(eventName)) return false;
+  set.add(eventName);
+  return true;
+}
+
+const PAGE_SEO_CONFIG = {
+  home: {
+    title: 'Cloud Comfort Ride | Professional Medical Transportation Seattle',
+    description: 'Safe, reliable non-emergency medical transportation in Seattle & King County. Wheelchair vans, dialysis, physical therapy, hospital discharge, and private rides.',
+    path: '/'
+  },
+  services: {
+    title: 'Medical Transportation Services | Cloud Comfort Ride Seattle',
+    description: 'Explore non-emergency medical transportation, ADA wheelchair transit, dialysis, physical therapy, hospital discharge, and private rides in Seattle.',
+    path: '/services'
+  },
+  about: {
+    title: 'About Us | Cloud Comfort Ride Seattle',
+    description: 'Learn about Cloud Comfort Ride, founded in Seattle in 2023 to deliver compassionate, punctual non-emergency medical transportation.',
+    path: '/about-us'
+  },
+  safety: {
+    title: 'Why Cloud Comfort Ride | Certified Drivers & Safety Standards',
+    description: 'Discover why patients and Seattle clinics trust Cloud Comfort Ride: CPR & First Aid certified drivers, background vetting, and ADA Q-Straint safety.',
+    path: '/why-cloud-comfort-ride'
+  },
+  fleet: {
+    title: 'Our Medical Transit Fleet | Cloud Comfort Ride Seattle',
+    description: 'View our ADA wheelchair accessible vans with hydraulic lifts, comfort sedans & SUVs, and sanitized cabins serving Seattle & King County.',
+    path: '/fleet'
+  },
+  book: {
+    title: 'Book A Ride Online | Cloud Comfort Ride Seattle',
+    description: 'Schedule your non-emergency medical, wheelchair, dialysis, or private ride online with Cloud Comfort Ride Seattle dispatch.',
+    path: '/book-a-ride'
+  },
+  contact: {
+    title: 'Contact Us | Cloud Comfort Ride Seattle Dispatch',
+    description: 'Contact Cloud Comfort Ride at (206) 327-4411 or info@cloudmedicaltrans.com. Office: 1902 E Yesler Way Unit #4, Seattle, WA 98122.',
+    path: '/contact-us'
+  },
+  privacy: {
+    title: 'Privacy Policy | Cloud Comfort Ride',
+    description: 'Read how Cloud Comfort Ride protects passenger privacy and medical transportation booking details.',
+    path: '/privacy-policy'
+  },
+  terms: {
+    title: 'Terms of Service | Cloud Comfort Ride',
+    description: 'Terms of service, scheduling guidelines, and non-emergency medical transportation policies for Cloud Comfort Ride.',
+    path: '/terms-of-service'
+  },
+  accessibility: {
+    title: 'Accessibility Statement | Cloud Comfort Ride',
+    description: 'Our commitment to physical ADA wheelchair accessibility and WCAG-compliant digital booking at Cloud Comfort Ride.',
+    path: '/accessibility-statement'
+  },
+  myBookings: {
+    title: 'My Bookings | Cloud Comfort Ride',
+    description: 'Look up your Cloud Comfort Ride booking reference, print trip vouchers, or request confirmation.',
+    path: '/my-booking',
+    noindex: true
+  },
+  dispatch: {
+    title: 'Owner Dispatch Portal | Cloud Comfort Ride',
+    description: 'Internal dispatch management for Cloud Comfort Ride.',
+    path: '/owner-dispatch',
+    noindex: true
+  }
+};
+
+export function applyPageSeo(pageKey) {
+  const cfg = PAGE_SEO_CONFIG[pageKey];
+  if (!cfg) return;
+  try {
+    wixSeoFrontend.setTitle(cfg.title);
+    const tags = [
+      { name: 'description', content: cfg.description }
+    ];
+    if (cfg.noindex) {
+      tags.push({ name: 'robots', content: 'noindex, nofollow' });
+    }
+    wixSeoFrontend.setMetaTags(tags);
+    wixSeoFrontend.setLinks([
+      { rel: 'canonical', href: `${COMPANY_INFO.website}${cfg.path}` }
+    ]);
+  } catch (e) {
+    // Ignore if SEO API is unavailable in preview
+  }
 }
 
 function getElement(selector) {
@@ -164,7 +264,7 @@ export function wireAllMasterCustomElements(currentPath) {
       el.setAttribute('current-path', currentPath);
       el.setAttribute('route-map', routeMapJson);
     }
-    if (typeof el.on === 'function') {
+    if (typeof el.on === 'function' && markWired(el, 'navigate')) {
       el.on('navigate', (event) => {
         const detail = (event && event.detail) || {};
         if (detail.serviceId) {
@@ -204,6 +304,7 @@ export function wireNavigationElement(selector) {
     if (typeof el.setAttribute === 'function') {
       el.setAttribute('route-map', routeMapJson);
     }
+    if (!markWired(el, 'navigate')) return;
     el.on('navigate', (event) => {
       const detail = (event && event.detail) || {};
       if (detail.serviceId) {
@@ -254,6 +355,7 @@ export function wireBookingElement(selector) {
   }
 
   targets.forEach((el) => {
+    if (!markWired(el, 'submitBooking')) return;
     el.on('submitBooking', async (event) => {
       const detail = (event && event.detail) || {};
       try {
@@ -276,6 +378,7 @@ export function wireContactElement(selector) {
   const targets = resolveAllPageCustomElements(selector);
   if (!targets.length) return;
   targets.forEach((el) => {
+    if (!markWired(el, 'submitContact')) return;
     el.on('submitContact', async (event) => {
       const detail = (event && event.detail) || {};
       try {
