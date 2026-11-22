@@ -1,11 +1,28 @@
 import wixData from 'wix-data';
 import { getSecret } from 'wix-secrets-backend';
-import { getServiceTitle } from 'public/companyData';
-import { OWNER_EMAIL, sendWixOrResendNotification } from './notificationService';
+import { COMPANY_INFO, getServiceTitle } from 'public/companyData';
+import { sendWixOrResendNotification } from './notificationService';
 
-const BOOKINGS_COLLECTION = 'Bookings';
+const CANDIDATE_BOOKING_COLLECTIONS = ['Import1', 'Import_1', 'Import 1', 'Bookings'];
+let cachedCollectionId = '';
+
+const OWNER_EMAIL = COMPANY_INFO.email;
 const OWNER_BOOKING_SECRET = 'CCR_OWNER_BOOKING_EMAIL_ID';
 const CUSTOMER_BOOKING_SECRET = 'CCR_CUSTOMER_BOOKING_EMAIL_ID';
+
+async function resolveBookingsCollectionId() {
+  if (cachedCollectionId) return cachedCollectionId;
+  for (const colId of CANDIDATE_BOOKING_COLLECTIONS) {
+    try {
+      await wixData.query(colId).limit(1).find({ suppressAuth: true });
+      cachedCollectionId = colId;
+      return colId;
+    } catch (err) {
+      // Try next candidate collection ID
+    }
+  }
+  return '';
+}
 
 async function verifyDispatchPin(pin) {
   let expectedPin = '';
@@ -59,7 +76,8 @@ function validateServerBooking(data) {
 
 /**
  * Submit a new transportation booking request.
- * Stores in Wix CMS 'Bookings' with status PENDING and logs owner/customer notifications.
+ * Resolves the active Wix CMS collection ('Import1' / 'Bookings'), saves all fields with status 'Pending',
+ * and triggers owner/customer notifications.
  */
 export async function submitBooking(payload) {
   if (payload && payload.website) {
@@ -79,6 +97,15 @@ export async function submitBooking(payload) {
     };
   }
 
+  const collectionId = await resolveBookingsCollectionId();
+  if (!collectionId) {
+    return {
+      success: false,
+      persistedToCms: false,
+      message: 'Booking CMS collection (Import 1 / Bookings) is not accessible. Please verify collection ID and permissions in Wix CMS.'
+    };
+  }
+
   const firstName = String(payload.firstName).trim();
   const lastName = String(payload.lastName).trim();
   const email = String(payload.email).trim().toLowerCase();
@@ -92,103 +119,118 @@ export async function submitBooking(payload) {
   try {
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     const dupQuery = clientRequestId
-      ? wixData.query(BOOKINGS_COLLECTION).eq('clientRequestId', clientRequestId)
-      : wixData.query(BOOKINGS_COLLECTION)
-        .eq('email', email)
+      ? wixData.query(collectionId).eq('clientRequestId', clientRequestId)
+      : wixData.query(collectionId)
+        .eq('emailAddress', email)
         .eq('pickupDate', pickupDate)
         .eq('pickupTime', pickupTime)
         .eq('destinationAddress', destinationAddress)
-        .ge('submissionDate', fiveMinAgo);
+        .ge('createdAt', fiveMinAgo);
 
     const existing = await dupQuery.limit(1).find({ suppressAuth: true });
     if (existing.items && existing.items.length > 0) {
-      const ref = existing.items[0].bookingReference || existing.items[0].bookingId;
+      const ref = existing.items[0].bookingId || existing.items[0].bookingReference;
       return {
         success: false,
         duplicate: true,
-        message: `A booking request for this trip was already received (Reference: ${ref}). View it in My Bookings or call (206) 327-4411.`
+        message: `A booking request for this trip was already received (Reference: ${ref}). View it in My Bookings.`
       };
     }
   } catch (e) {
-    // Proceed to insert; insert itself will fail cleanly if Bookings collection does not exist
+    // Proceed to insert if field index/query isn't present yet
   }
 
   const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-  const bookingReference = `CCR-${new Date().getFullYear()}-${randomSuffix}`;
+  const bookingId = `CCR-${new Date().getFullYear()}-${randomSuffix}`;
   const nowIso = new Date().toISOString();
   const serviceTitle = getServiceTitle(String(payload.serviceType));
+  const hasCompanion = Boolean(payload.hasCompanion ?? payload.companionRequired);
+  const companionCount = hasCompanion ? Number(payload.companionCount || 1) : 0;
 
   const record = {
-    bookingReference,
-    firstName,
-    lastName,
-    email,
-    phone,
+    bookingId,
+    bookingReference: bookingId,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    bookingStatus: 'Pending',
     serviceType: String(payload.serviceType),
+    serviceTitle,
     vehicleOption: String(payload.vehiclePreference || payload.vehicleOption || 'best_match'),
     tripType: payload.tripType === 'one_way' ? 'one_way' : 'round_trip',
     pickupDate,
     pickupTime,
+    estimatedReturnTime: payload.tripType === 'round_trip' ? String(payload.returnTime || '') : '',
     returnTime: payload.tripType === 'round_trip' ? String(payload.returnTime || '') : '',
     pickupAddress: String(payload.pickupAddress).trim(),
     pickupNotes: String(payload.pickupNotes || '').trim(),
     facilityName: String(payload.facilityName || '').trim(),
     destinationAddress,
-    department: String(payload.destinationNotes || payload.department || '').trim(),
-    mobilityRequirement: String(payload.mobilityNeed || payload.mobilityRequirement || 'ambulatory'),
-    companionRequired: Boolean(payload.hasCompanion ?? payload.companionRequired),
-    bookingStatus: 'PENDING',
-    submissionDate: nowIso,
+    departmentSuite: String(payload.destinationNotes || payload.departmentSuite || '').trim(),
+    passengerFirstName: firstName,
+    passengerLastName: lastName,
+    firstName,
+    lastName,
+    passengerName: `${firstName} ${lastName}`,
+    contactPhone: phone,
+    phone,
+    emailAddress: email,
+    email,
+    mobilityRequirements: String(payload.mobilityNeed || payload.mobilityRequirements || 'ambulatory'),
+    familyCompanion: hasCompanion,
+    additionalPassengers: companionCount,
+    hasStairs: Boolean(payload.hasStairs),
+    specialInstructions: String(payload.specialInstructions || '').trim(),
+    paymentPreference: String(payload.paymentPreference || '').trim(),
+    customerNotes: String(payload.customerNotes || '').trim(),
     ownerNotes: '',
     notificationStatus: 'PENDING',
-    clientRequestId,
-    specialInstructions: String(payload.specialInstructions || '').trim()
+    clientRequestId
   };
 
   let insertedItem = null;
   try {
-    insertedItem = await wixData.insert(BOOKINGS_COLLECTION, record, { suppressAuth: true });
+    insertedItem = await wixData.insert(collectionId, record, { suppressAuth: true });
   } catch (err) {
     const reason = err && err.message ? err.message : 'Unknown database error';
-    console.error('Bookings CMS insert failed:', reason);
+    console.error(`Wix CMS insert failed on '${collectionId}':`, reason);
     return {
       success: false,
       persistedToCms: false,
-      message: 'We could not save your booking request right now. Please try again in a moment.'
+      message: `Unable to save booking to CMS (${collectionId}): ${reason}`
     };
   }
 
   const emailVars = {
-    bookingId: bookingReference,
-    bookingReference,
+    bookingId,
+    bookingReference: bookingId,
     serviceTitle,
     vehicleOption: record.vehicleOption,
     tripType: record.tripType === 'round_trip' ? 'Round Trip' : 'One-Way',
     pickupDate: record.pickupDate,
     pickupTime: record.pickupTime,
-    returnTime: record.returnTime || 'N/A',
+    returnTime: record.estimatedReturnTime || 'N/A',
     pickupAddress: record.pickupAddress,
     pickupNotes: record.pickupNotes || 'None',
     facilityName: record.facilityName || 'N/A',
     destinationAddress: record.destinationAddress,
-    department: record.department || 'None',
-    passengerName: `${firstName} ${lastName}`,
-    passengerPhone: record.phone,
-    passengerEmail: record.email,
-    mobilityRequirement: record.mobilityRequirement,
-    companionRequired: record.companionRequired ? 'Yes' : 'No',
+    department: record.departmentSuite || 'None',
+    passengerName: record.passengerName,
+    passengerPhone: record.contactPhone,
+    passengerEmail: record.emailAddress,
+    mobilityRequirement: record.mobilityRequirements,
+    companionRequired: record.familyCompanion ? `Yes (${companionCount})` : 'No',
     specialInstructions: record.specialInstructions || 'None',
-    bookingStatus: 'PENDING'
+    bookingStatus: 'Pending'
   };
 
   const ownerHtml = `
-    <h2>New Cloud Comfort Ride Booking Request (${bookingReference})</h2>
-    <p><strong>Status:</strong> PENDING OWNER CONFIRMATION</p>
-    <p><strong>Passenger:</strong> ${firstName} ${lastName} | <strong>Phone:</strong> ${record.phone} | <strong>Email:</strong> ${record.email}</p>
+    <h2>New Cloud Comfort Ride Booking Request (${bookingId})</h2>
+    <p><strong>Status:</strong> Pending Owner Confirmation</p>
+    <p><strong>Passenger:</strong> ${record.passengerName} | <strong>Phone:</strong> ${record.contactPhone} | <strong>Email:</strong> ${record.emailAddress}</p>
     <p><strong>Service:</strong> ${serviceTitle} (${emailVars.tripType}) | <strong>Vehicle:</strong> ${record.vehicleOption}</p>
     <p><strong>Pickup:</strong> ${record.pickupDate} at ${record.pickupTime} — ${record.pickupAddress} (Notes: ${emailVars.pickupNotes})</p>
     <p><strong>Destination:</strong> ${record.facilityName ? `${record.facilityName} — ` : ''}${record.destinationAddress} (${emailVars.department})</p>
-    <p><strong>Mobility:</strong> ${record.mobilityRequirement} | <strong>Companion Required:</strong> ${emailVars.companionRequired}</p>
+    <p><strong>Mobility:</strong> ${record.mobilityRequirements} | <strong>Companion:</strong> ${emailVars.companionRequired}</p>
     <p><strong>Special Instructions:</strong> ${emailVars.specialInstructions}</p>
     <p>Manage &amp; Confirm in Owner Dispatch: https://www.cloudcomfortride.com/owner-dispatch</p>
   `;
@@ -196,33 +238,33 @@ export async function submitBooking(payload) {
   const customerHtml = `
     <h2>Your transportation request has been received successfully.</h2>
     <p>Dear ${firstName},</p>
-    <p>Your Cloud Comfort Ride request (<strong>${bookingReference}</strong>) has been saved and is currently <strong>PENDING</strong> owner confirmation.</p>
+    <p>Your Cloud Comfort Ride request (<strong>${bookingId}</strong>) has been saved and is currently <strong>Pending</strong> owner confirmation.</p>
     <p><strong>Requested Service:</strong> ${serviceTitle}<br/><strong>Pickup Date &amp; Time:</strong> ${record.pickupDate} at ${record.pickupTime}<br/><strong>Pickup:</strong> ${record.pickupAddress}<br/><strong>Destination:</strong> ${record.destinationAddress}</p>
     <p>Our team will review your request and send a confirmation once your driver is assigned. Your ride is not confirmed until you receive confirmation from Cloud Comfort Ride.</p>
   `;
 
   const [ownerResult, customerResult] = await Promise.all([
     sendWixOrResendNotification({
-      relatedRecordReference: bookingReference,
+      relatedRecordReference: bookingId,
       notificationType: 'OWNER_BOOKING_NOTIFICATION',
       recipientEmail: OWNER_EMAIL,
       recipientFirstName: 'Cloud Comfort Ride',
       recipientLastName: 'Dispatch',
       triggeredEmailSecretName: OWNER_BOOKING_SECRET,
       variables: emailVars,
-      fallbackSubject: `New Booking Request ${bookingReference} — ${firstName} ${lastName}`,
+      fallbackSubject: `New Booking Request ${bookingId} — ${record.passengerName}`,
       fallbackHtml: ownerHtml
     }),
     sendWixOrResendNotification({
-      relatedRecordReference: bookingReference,
+      relatedRecordReference: bookingId,
       notificationType: 'CUSTOMER_BOOKING_ACKNOWLEDGEMENT',
-      recipientEmail: record.email,
+      recipientEmail: record.emailAddress,
       recipientFirstName: firstName,
       recipientLastName: lastName,
-      recipientPhone: record.phone,
+      recipientPhone: record.contactPhone,
       triggeredEmailSecretName: CUSTOMER_BOOKING_SECRET,
       variables: emailVars,
-      fallbackSubject: `Cloud Comfort Ride Request Received (${bookingReference})`,
+      fallbackSubject: `Cloud Comfort Ride Request Received (${bookingId})`,
       fallbackHtml: customerHtml
     })
   ]);
@@ -232,9 +274,10 @@ export async function submitBooking(payload) {
     : (ownerResult.delivered || customerResult.delivered ? 'PARTIAL' : 'FAILED');
 
   try {
-    await wixData.update(BOOKINGS_COLLECTION, {
+    await wixData.update(collectionId, {
       ...insertedItem,
-      notificationStatus
+      notificationStatus,
+      updatedAt: new Date().toISOString()
     }, { suppressAuth: true });
   } catch (e) {
     // Non-fatal update error
@@ -243,18 +286,20 @@ export async function submitBooking(payload) {
   return {
     success: true,
     persistedToCms: true,
+    collectionId,
     ownerNotified: ownerResult.delivered,
     customerNotified: customerResult.delivered,
     notificationStatus,
     booking: {
       ...record,
+      id: bookingId,
       notificationStatus
     }
   };
 }
 
 /**
- * Verified customer booking lookup: requires BOTH bookingReference AND matching email or phone.
+ * Verified customer booking lookup: requires BOTH bookingId/bookingReference AND matching email or phone.
  */
 export async function lookupVerifiedBooking(bookingReference, verifier) {
   const ref = String(bookingReference || '').trim().toUpperCase();
@@ -267,18 +312,22 @@ export async function lookupVerifiedBooking(bookingReference, verifier) {
     };
   }
 
+  const collectionId = await resolveBookingsCollectionId();
+  if (!collectionId) {
+    return { success: false, items: [], message: 'Booking database is unavailable right now.' };
+  }
+
   try {
-    const res = await wixData.query(BOOKINGS_COLLECTION)
-      .eq('bookingReference', ref)
-      .limit(5)
-      .find({ suppressAuth: true });
+    const byId = wixData.query(collectionId).eq('bookingId', ref);
+    const byRef = wixData.query(collectionId).eq('bookingReference', ref);
+    const res = await byId.or(byRef).limit(5).find({ suppressAuth: true });
 
     const checkLower = check.toLowerCase();
     const checkDigits = check.replace(/\D/g, '');
 
     const matched = (res.items || []).filter((item) => {
-      const itemEmail = String(item.email || item.passengerEmail || '').toLowerCase();
-      const itemDigits = String(item.phone || item.passengerPhone || '').replace(/\D/g, '');
+      const itemEmail = String(item.emailAddress || item.email || item.passengerEmail || '').toLowerCase();
+      const itemDigits = String(item.contactPhone || item.phone || item.passengerPhone || '').replace(/\D/g, '');
       const emailMatch = itemEmail && itemEmail === checkLower;
       const phoneMatch = checkDigits.length >= 4 && itemDigits && (itemDigits === checkDigits || itemDigits.endsWith(checkDigits));
       return emailMatch || phoneMatch;
@@ -297,7 +346,7 @@ export async function lookupVerifiedBooking(bookingReference, verifier) {
     return {
       success: false,
       items: [],
-      message: 'Unable to reach booking lookup service. Please call (206) 327-4411.'
+      message: 'Unable to reach booking lookup service.'
     };
   }
 }
@@ -309,9 +358,13 @@ export async function cancelBooking(bookingReference, verifier = '') {
   const ref = String(bookingReference || '').trim().toUpperCase();
   if (!ref) return { success: false, message: 'Booking reference is required.' };
 
+  const collectionId = await resolveBookingsCollectionId();
+  if (!collectionId) return { success: false, message: 'Booking database unavailable.' };
+
   try {
-    const res = await wixData.query(BOOKINGS_COLLECTION)
-      .eq('bookingReference', ref)
+    const res = await wixData.query(collectionId)
+      .eq('bookingId', ref)
+      .or(wixData.query(collectionId).eq('bookingReference', ref))
       .limit(1)
       .find({ suppressAuth: true });
 
@@ -322,17 +375,17 @@ export async function cancelBooking(bookingReference, verifier = '') {
     if (verifier) {
       const vLower = String(verifier).trim().toLowerCase();
       const vDigits = String(verifier).replace(/\D/g, '');
-      const emailMatch = String(item.email || item.passengerEmail || '').toLowerCase() === vLower;
-      const phoneMatch = vDigits.length >= 4 && String(item.phone || item.passengerPhone || '').replace(/\D/g, '').endsWith(vDigits);
+      const emailMatch = String(item.emailAddress || item.email || item.passengerEmail || '').toLowerCase() === vLower;
+      const phoneMatch = vDigits.length >= 4 && String(item.contactPhone || item.phone || item.passengerPhone || '').replace(/\D/g, '').endsWith(vDigits);
       if (!emailMatch && !phoneMatch) {
         return { success: false, message: 'Verification failed for this booking.' };
       }
     }
 
-    await wixData.update(BOOKINGS_COLLECTION, {
+    await wixData.update(collectionId, {
       ...item,
-      bookingStatus: 'CANCELLED',
-      status: 'CANCELLED',
+      bookingStatus: 'Cancelled',
+      status: 'Cancelled',
       updatedAt: new Date().toISOString()
     }, { suppressAuth: true });
 
@@ -370,7 +423,7 @@ export async function requestBookingConfirmation(bookingReference) {
 }
 
 /**
- * Owner Dispatch: list all bookings from Wix CMS 'Bookings' collection.
+ * Owner Dispatch: list all bookings from the active Wix CMS collection.
  */
 export async function listAllBookings(pin) {
   const ok = await verifyDispatchPin(pin);
@@ -378,19 +431,25 @@ export async function listAllBookings(pin) {
     return { success: false, message: 'Invalid Dispatch PIN.', items: [] };
   }
 
+  const collectionId = await resolveBookingsCollectionId();
+  if (!collectionId) {
+    return { success: false, items: [], message: 'Bookings CMS collection (Import 1 / Bookings) not found.' };
+  }
+
   try {
-    const res = await wixData.query(BOOKINGS_COLLECTION)
-      .descending('submissionDate')
+    const res = await wixData.query(collectionId)
+      .descending('createdAt')
       .limit(100)
       .find({ suppressAuth: true });
-    return { success: true, items: res.items || [] };
+    return { success: true, collectionId, items: res.items || [] };
   } catch (err) {
-    return { success: false, items: [], message: 'Bookings CMS collection not yet provisioned.' };
+    const resFallback = await wixData.query(collectionId).limit(100).find({ suppressAuth: true });
+    return { success: true, collectionId, items: resFallback.items || [] };
   }
 }
 
 /**
- * Owner Dispatch: update booking status ('CONFIRMED', 'REJECTED', 'CANCELLED', 'PENDING') + ownerNotes.
+ * Owner Dispatch: update booking status ('CONFIRMED', 'REJECTED', 'CANCELLED', 'COMPLETED', 'PENDING') + ownerNotes.
  */
 export async function updateBookingStatus(pin, bookingReference, nextStatus, ownerNotes = '') {
   const ok = await verifyDispatchPin(pin);
@@ -399,14 +458,21 @@ export async function updateBookingStatus(pin, bookingReference, nextStatus, own
   }
 
   const normalized = String(nextStatus || '').toUpperCase();
-  const allowed = ['CONFIRMED', 'REJECTED', 'CANCELLED', 'PENDING'];
+  const allowed = ['CONFIRMED', 'REJECTED', 'CANCELLED', 'COMPLETED', 'PENDING'];
   if (!allowed.includes(normalized)) {
     return { success: false, message: 'Invalid booking status.' };
   }
 
+  const collectionId = await resolveBookingsCollectionId();
+  if (!collectionId) {
+    return { success: false, message: 'Booking collection not found.' };
+  }
+
   try {
-    const res = await wixData.query(BOOKINGS_COLLECTION)
-      .eq('bookingReference', String(bookingReference).trim())
+    const ref = String(bookingReference).trim();
+    const res = await wixData.query(collectionId)
+      .eq('bookingId', ref)
+      .or(wixData.query(collectionId).eq('bookingReference', ref))
       .limit(1)
       .find({ suppressAuth: true });
 
@@ -422,31 +488,32 @@ export async function updateBookingStatus(pin, bookingReference, nextStatus, own
       ownerNotes: ownerNotes !== undefined ? String(ownerNotes).trim() : (current.ownerNotes || ''),
       updatedAt: new Date().toISOString()
     };
-    await wixData.update(BOOKINGS_COLLECTION, updated, { suppressAuth: true });
+    await wixData.update(collectionId, updated, { suppressAuth: true });
 
-    const customerEmail = updated.email || updated.passengerEmail;
+    const customerEmail = updated.emailAddress || updated.email || updated.passengerEmail;
+    const refOut = updated.bookingId || updated.bookingReference;
     if ((normalized === 'CONFIRMED' || normalized === 'REJECTED') && customerEmail) {
       await sendWixOrResendNotification({
-        relatedRecordReference: updated.bookingReference,
+        relatedRecordReference: refOut,
         notificationType: `CUSTOMER_STATUS_${normalized}`,
         recipientEmail: customerEmail,
-        recipientFirstName: updated.firstName || 'Passenger',
-        recipientLastName: updated.lastName || '',
+        recipientFirstName: updated.passengerFirstName || updated.firstName || 'Passenger',
+        recipientLastName: updated.passengerLastName || updated.lastName || '',
         triggeredEmailSecretName: CUSTOMER_BOOKING_SECRET,
         variables: {
-          bookingId: updated.bookingReference,
-          bookingReference: updated.bookingReference,
+          bookingId: refOut,
+          bookingReference: refOut,
           serviceTitle: updated.serviceTitle || getServiceTitle(updated.serviceType),
           pickupDate: updated.pickupDate,
           pickupTime: updated.pickupTime,
           pickupAddress: updated.pickupAddress,
           destinationAddress: updated.destinationAddress,
-          passengerName: updated.passengerName,
+          passengerName: updated.passengerName || `${updated.passengerFirstName || ''} ${updated.passengerLastName || ''}`.trim(),
           bookingStatus: normalized,
           specialInstructions: `Status: ${normalized}${updated.ownerNotes ? ` — ${updated.ownerNotes}` : ''}`
         },
-        fallbackSubject: `Cloud Comfort Ride Booking ${normalized} (${updated.bookingReference})`,
-        fallbackHtml: `<p>Your Cloud Comfort Ride booking <strong>${updated.bookingReference}</strong> is now <strong>${normalized}</strong>.</p><p>${updated.ownerNotes || ''}</p>`
+        fallbackSubject: `Cloud Comfort Ride Booking ${normalized} (${refOut})`,
+        fallbackHtml: `<p>Your Cloud Comfort Ride booking <strong>${refOut}</strong> is now <strong>${normalized}</strong>.</p><p>${updated.ownerNotes || ''}</p>`
       });
     }
 
