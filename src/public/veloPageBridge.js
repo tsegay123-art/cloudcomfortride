@@ -19,7 +19,8 @@ const ROUTE_ALIASES = {
   '/why-cloud-medical': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
   '/book-a-ride': { urls: ['/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
   '/book-online': { urls: ['/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
-  '/my-bookings': { urls: ['/my-bookings', '/my-booking'], names: ['my bookings', 'my booking'] },
+  '/my-bookings': { urls: ['/my-booking', '/my-bookings'], names: ['my booking', 'my bookings'] },
+  '/my-booking': { urls: ['/my-booking', '/my-bookings'], names: ['my booking', 'my bookings'] },
   '/contact': { urls: ['/contact', '/contact-us'], names: ['contact'] },
   '/privacy': { urls: ['/privacy', '/privacy-policy'], names: ['privacy policy', 'privacy'] },
   '/terms': { urls: ['/terms', '/terms-of-service'], names: ['terms of service', 'terms'] },
@@ -41,29 +42,40 @@ function resolveWixRoute(requestedPath) {
     }
 
     const SYSTEM_BOOKING_URLS = ['/book-online', '/booking-form', '/booking-calendar', '/service-page'];
+    const SYSTEM_MEMBER_BOOKING_URLS = ['/account/my-bookings'];
     const isBookingTarget = clean === '/book-a-ride' || clean === '/book-online';
+    const isMyBookingsTarget = clean === '/my-bookings' || clean === '/my-booking';
 
-    const exact = pages.find((p) => normUrl(p.url) === clean && !(isBookingTarget && SYSTEM_BOOKING_URLS.includes(normUrl(p.url))));
-    if (exact && exact.url) return normUrl(exact.url);
+    const isAllowedPage = (p) => {
+      const u = normUrl(p.url);
+      if (isBookingTarget && SYSTEM_BOOKING_URLS.includes(u)) return false;
+      if (isMyBookingsTarget && SYSTEM_MEMBER_BOOKING_URLS.includes(u)) return false;
+      return true;
+    };
+
+    if (!isMyBookingsTarget) {
+      const exact = pages.find((p) => normUrl(p.url) === clean && isAllowedPage(p));
+      if (exact && exact.url) return normUrl(exact.url);
+    }
 
     const rule = ROUTE_ALIASES[clean];
     if (rule) {
-      const byAliasUrl = pages.find((p) => {
-        const u = normUrl(p.url);
-        if (isBookingTarget && SYSTEM_BOOKING_URLS.includes(u)) return false;
-        return rule.urls.includes(u);
-      });
-      if (byAliasUrl && byAliasUrl.url) return normUrl(byAliasUrl.url);
+      for (const candidateUrl of rule.urls) {
+        const byAliasUrl = pages.find((p) => normUrl(p.url) === candidateUrl && isAllowedPage(p));
+        if (byAliasUrl && byAliasUrl.url) return normUrl(byAliasUrl.url);
+      }
 
-      const byName = pages.find((p) => {
-        const u = normUrl(p.url);
-        const pname = String(p.name || '').toLowerCase();
-        if (isBookingTarget && (SYSTEM_BOOKING_URLS.includes(u) || pname.includes('my booking') || pname.includes('book online') || pname.includes('booking form'))) {
-          return false;
-        }
-        return rule.names.some((n) => pname.includes(n));
-      });
-      if (byName && byName.url) return normUrl(byName.url);
+      for (const candidateName of rule.names) {
+        const byName = pages.find((p) => {
+          if (!isAllowedPage(p)) return false;
+          const pname = String(p.name || '').toLowerCase();
+          if (isBookingTarget && (pname.includes('my booking') || pname.includes('book online') || pname.includes('booking form'))) {
+            return false;
+          }
+          return pname.includes(candidateName);
+        });
+        if (byName && byName.url) return normUrl(byName.url);
+      }
     }
 
     if (clean === '/book-a-ride' || clean === '/book-online') {

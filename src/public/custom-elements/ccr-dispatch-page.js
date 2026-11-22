@@ -90,6 +90,49 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       }));
     }
 
+    _exportBookingsCsv(rows) {
+      if (!rows || !rows.length) return;
+      const csvCell = (val) => `"${String(val == null ? '' : val).replace(/"/g, '""')}"`;
+      const headers = [
+        'Reference', 'Status', 'Passenger', 'Email', 'Phone',
+        'Service', 'Vehicle', 'Trip Type', 'Pickup Date', 'Pickup Time',
+        'Return Time', 'Pickup Address', 'Destination Address',
+        'Mobility Needs', 'Passengers', 'Notes', 'Owner Notes', 'Submitted'
+      ];
+      const lines = [headers.map(csvCell).join(',')];
+      rows.forEach((b) => {
+        lines.push([
+          b.bookingReference || b.bookingId || b.id || '',
+          String(b.bookingStatus || b.status || 'PENDING').toUpperCase(),
+          b.passengerName || `${b.firstName || ''} ${b.lastName || ''}`.trim(),
+          b.email || '',
+          b.phone || '',
+          getServiceTitle(b.serviceType),
+          b.vehicleType || '',
+          b.tripType || '',
+          b.pickupDate || '',
+          b.pickupTime || '',
+          b.returnTime || '',
+          b.pickupAddress || '',
+          b.destinationAddress || '',
+          b.mobilityNeeds || '',
+          b.passengerCount || 1,
+          b.notes || '',
+          b.ownerNotes || '',
+          b.submissionDate || b.createdAt || ''
+        ].map(csvCell).join(','));
+      });
+      const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cloud-comfort-ride-bookings-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
     render() {
       const normStatus = (b) => String(b.bookingStatus || b.status || 'PENDING').toUpperCase();
       const pendingCount = this._bookings.filter((b) => normStatus(b) === 'PENDING').length;
@@ -210,7 +253,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                     Contact Messages (${this._inquiries.length})
                   </button>
                 </div>
-                <button class="dt-button-outline" id="refresh-dispatch" ${this._loading ? 'disabled' : ''}>↻ Refresh</button>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                  ${this._tab === 'bookings' ? `<button class="dt-button-outline" id="export-csv-btn" ${filteredBookings.length === 0 ? 'disabled' : ''}>⬇ Export CSV</button>` : ''}
+                  <button class="dt-button-outline" id="refresh-dispatch" ${this._loading ? 'disabled' : ''}>↻ Refresh</button>
+                </div>
               </div>
 
               ${this._error ? `<div role="alert" style="padding:12px;border-radius:10px;background:#fef2f2;color:#dc2626;font-size:15px;font-weight:700;margin-bottom:16px;">${escapeHtml(this._error)}</div>` : ''}
@@ -323,9 +369,11 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       const tabB = this.shadowRoot.getElementById('tab-bookings');
       const tabI = this.shadowRoot.getElementById('tab-inquiries');
       const refBtn = this.shadowRoot.getElementById('refresh-dispatch');
+      const exportBtn = this.shadowRoot.getElementById('export-csv-btn');
       if (tabB) tabB.addEventListener('click', () => { this._tab = 'bookings'; this.render(); });
       if (tabI) tabI.addEventListener('click', () => { this._tab = 'inquiries'; this.render(); });
       if (refBtn) refBtn.addEventListener('click', () => this._login(this._pin));
+      if (exportBtn) exportBtn.addEventListener('click', () => this._exportBookingsCsv(filteredBookings));
 
       const dSearch = /** @type {HTMLInputElement | null} */ (this.shadowRoot.getElementById('d-search'));
       const dDate = /** @type {HTMLInputElement | null} */ (this.shadowRoot.getElementById('d-date'));

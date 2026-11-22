@@ -2,7 +2,22 @@ import wixData from 'wix-data';
 import { getSecret } from 'wix-secrets-backend';
 import { OWNER_EMAIL, sendWixOrResendNotification } from './notificationService';
 
-const INQUIRIES_COLLECTION = 'ContactMessages';
+const CONTACT_COLLECTION_CANDIDATES = ['ContactSubmissions', 'ContactMessages'];
+let resolvedContactCollection = null;
+
+async function resolveContactCollectionId() {
+  if (resolvedContactCollection) return resolvedContactCollection;
+  for (const name of CONTACT_COLLECTION_CANDIDATES) {
+    try {
+      await wixData.query(name).limit(1).find({ suppressAuth: true });
+      resolvedContactCollection = name;
+      return name;
+    } catch (e) {
+      // Try next candidate
+    }
+  }
+  return 'ContactSubmissions';
+}
 const OWNER_CONTACT_SECRET = 'CCR_OWNER_CONTACT_EMAIL_ID';
 const CUSTOMER_CONTACT_SECRET = 'CCR_CUSTOMER_CONTACT_EMAIL_ID';
 
@@ -56,10 +71,12 @@ export async function submitInquiry(payload) {
     };
   }
 
+  const collectionId = await resolveContactCollectionId();
+
   // Duplicate submission guard (within last 5 minutes)
   try {
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-    const existing = await wixData.query(INQUIRIES_COLLECTION)
+    const existing = await wixData.query(collectionId)
       .eq('email', email)
       .eq('message', message)
       .ge('submissionDate', fiveMinAgo)
@@ -101,9 +118,9 @@ export async function submitInquiry(payload) {
 
   let insertedItem = null;
   try {
-    insertedItem = await wixData.insert(INQUIRIES_COLLECTION, record, { suppressAuth: true });
+    insertedItem = await wixData.insert(collectionId, record, { suppressAuth: true });
   } catch (err) {
-    console.error('ContactMessages CMS insert failed:', err && err.message ? err.message : err);
+    console.error(`${collectionId} CMS insert failed:`, err && err.message ? err.message : err);
     return {
       success: false,
       persistedToCms: false,
@@ -152,7 +169,7 @@ export async function submitInquiry(payload) {
     : (ownerResult.delivered || customerResult.delivered ? 'PARTIAL' : 'FAILED');
 
   try {
-    await wixData.update(INQUIRIES_COLLECTION, {
+    await wixData.update(collectionId, {
       ...insertedItem,
       notificationStatus
     }, { suppressAuth: true });
@@ -178,14 +195,15 @@ export async function listAllInquiries(pin) {
   if (!ok) {
     return { success: false, message: 'Invalid Dispatch PIN.', items: [] };
   }
+  const collectionId = await resolveContactCollectionId();
   try {
-    const res = await wixData.query(INQUIRIES_COLLECTION)
+    const res = await wixData.query(collectionId)
       .descending('submissionDate')
       .limit(100)
       .find({ suppressAuth: true });
     return { success: true, items: res.items || [] };
   } catch (err) {
-    return { success: false, items: [], message: 'ContactMessages CMS collection not yet provisioned.' };
+    return { success: false, items: [], message: 'ContactSubmissions / ContactMessages CMS collection not yet provisioned.' };
   }
 }
 
@@ -194,8 +212,9 @@ export async function resolveInquiry(pin, messageReference) {
   if (!ok) {
     return { success: false, message: 'Invalid Dispatch PIN.' };
   }
+  const collectionId = await resolveContactCollectionId();
   try {
-    const res = await wixData.query(INQUIRIES_COLLECTION)
+    const res = await wixData.query(collectionId)
       .eq('messageReference', String(messageReference).trim())
       .limit(1)
       .find({ suppressAuth: true });
@@ -208,7 +227,7 @@ export async function resolveInquiry(pin, messageReference) {
       status: 'RESOLVED',
       updatedAt: new Date().toISOString()
     };
-    await wixData.update(INQUIRIES_COLLECTION, updated, { suppressAuth: true });
+    await wixData.update(collectionId, updated, { suppressAuth: true });
     return { success: true, inquiry: updated };
   } catch (err) {
     return { success: false, message: 'Unable to update inquiry.' };
