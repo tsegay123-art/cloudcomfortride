@@ -508,7 +508,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           <div class="section-head" style="margin-top:0;"><span class="step-num">1</span> Service &amp; Schedule</div>
           <div class="grid-3">
             <div>
-              <label for="serviceType">Select Service &amp; Transportation Type *</label>
+              <label for="serviceType">Service &amp; Transport Type *</label>
               <select id="serviceType">
                 ${BOOKING_SERVICE_OPTIONS.map((opt) => `
                   <option value="${opt.value}" ${opt.disabled ? 'disabled' : ''} ${s.serviceType === opt.value ? 'selected' : ''}>
