@@ -75,7 +75,7 @@ export async function sendWixOrResendNotification({
   recipientFirstName = 'Cloud Comfort Ride',
   recipientLastName = 'Customer',
   recipientPhone = '',
-  triggeredEmailId,
+  triggeredEmailSecretName = '',
   variables,
   fallbackSubject,
   fallbackHtml
@@ -83,24 +83,37 @@ export async function sendWixOrResendNotification({
   let delivered = false;
   const errors = [];
 
-  try {
-    const contactPayload = {
-      emails: [{ email: recipientEmail, primary: true }],
-      name: { first: recipientFirstName, last: recipientLastName }
-    };
-    if (recipientPhone) {
-      contactPayload.phones = [{ phone: recipientPhone, primary: true }];
+  if (triggeredEmailSecretName) {
+    let emailTemplateId = '';
+    try {
+      emailTemplateId = await getSecret(triggeredEmailSecretName);
+    } catch (e) {
+      emailTemplateId = '';
     }
-    const contactRes = await wixCrmBackend.contacts.appendOrCreateContact(contactPayload);
-    const contactId = contactRes && contactRes.contactId;
-    if (contactId) {
-      await wixCrmBackend.triggeredEmails.emailContact(triggeredEmailId, contactId, { variables });
-      delivered = true;
+
+    if (emailTemplateId) {
+      try {
+        const contactPayload = {
+          emails: [{ email: recipientEmail, primary: true }],
+          name: { first: recipientFirstName, last: recipientLastName }
+        };
+        if (recipientPhone) {
+          contactPayload.phones = [{ phone: recipientPhone, primary: true }];
+        }
+        const contactRes = await wixCrmBackend.contacts.appendOrCreateContact(contactPayload);
+        const contactId = contactRes && contactRes.contactId;
+        if (contactId) {
+          await wixCrmBackend.triggeredEmails.emailContact(emailTemplateId, contactId, { variables });
+          delivered = true;
+        } else {
+          errors.push('Wix CRM contactId not returned');
+        }
+      } catch (err) {
+        errors.push(`TriggeredEmail(${triggeredEmailSecretName}): ${err && err.message ? err.message : err}`);
+      }
     } else {
-      errors.push('Wix CRM contactId not returned');
+      errors.push(`${triggeredEmailSecretName} not set in Wix Secrets Manager`);
     }
-  } catch (err) {
-    errors.push(`TriggeredEmail(${triggeredEmailId}): ${err && err.message ? err.message : err}`);
   }
 
   if (!delivered) {

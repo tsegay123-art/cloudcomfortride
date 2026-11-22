@@ -32,7 +32,14 @@ export function validateBookingPayload(data) {
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(data.email).trim())) {
     errors.email = 'Please provide a valid email address';
   }
-  if (!data.pickupDate) errors.pickupDate = 'Pickup date is required';
+  if (!data.pickupDate) {
+    errors.pickupDate = 'Pickup date is required';
+  } else {
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (String(data.pickupDate) < todayStr) {
+      errors.pickupDate = 'Pickup date cannot be in the past';
+    }
+  }
   if (!data.pickupTime) errors.pickupTime = 'Pickup time is required';
   if (data.tripType === 'round_trip' && !data.returnTime) {
     errors.returnTime = 'Estimated return time is required for round trips';
@@ -132,28 +139,34 @@ export function escapeHtml(str) {
 }
 
 export function buildVoucherMarkup(booking) {
+  const ref = escapeHtml(booking.bookingReference || booking.bookingId || booking.id);
   const serviceTitle = escapeHtml(getServiceTitle(booking.serviceType));
   const tripLabel = booking.tripType === 'round_trip' ? 'Round Trip' : 'One-Way';
+  const statusLabel = escapeHtml(String(booking.bookingStatus || booking.status || 'PENDING').replace('_', ' ').toUpperCase());
+  const pName = escapeHtml(booking.passengerName || `${booking.firstName || ''} ${booking.lastName || ''}`.trim());
+  const pPhone = escapeHtml(booking.phone || booking.passengerPhone);
+  const mobility = escapeHtml(formatMobilityLabel(booking.mobilityRequirement || booking.mobilityNeed));
+  const hasComp = Boolean(booking.companionRequired ?? booking.hasCompanion);
   return `
     <div class="voucher-card">
       <div class="voucher-head">
         <div>
-          <div class="voucher-eyebrow">Cloud Comfort Ride • Official Dispatch Voucher</div>
-          <h3>Booking Reference: ${escapeHtml(booking.id)}</h3>
+          <div class="voucher-eyebrow">Cloud Comfort Ride • Transportation Request Voucher</div>
+          <h3>Booking Reference: ${ref}</h3>
         </div>
-        <span class="voucher-status">${escapeHtml((booking.status || 'pending_review').replace('_', ' ').toUpperCase())}</span>
+        <span class="voucher-status">${statusLabel}</span>
       </div>
       <div class="voucher-grid">
-        <div><span>Passenger</span><strong>${escapeHtml(booking.passengerName)}</strong></div>
-        <div><span>Phone</span><strong>${escapeHtml(booking.passengerPhone)}</strong></div>
+        <div><span>Passenger</span><strong>${pName}</strong></div>
+        <div><span>Phone</span><strong>${pPhone}</strong></div>
         <div><span>Service Type</span><strong>${serviceTitle}</strong></div>
         <div><span>Trip Mode</span><strong>${tripLabel}</strong></div>
         <div><span>Pickup Date & Time</span><strong>${escapeHtml(booking.pickupDate)} at ${escapeHtml(booking.pickupTime)}</strong></div>
         ${booking.returnTime ? `<div><span>Estimated Return</span><strong>${escapeHtml(booking.returnTime)}</strong></div>` : ''}
         <div><span>Pickup Address</span><strong>${escapeHtml(booking.pickupAddress)}</strong></div>
         <div><span>Destination</span><strong>${escapeHtml(booking.facilityName ? `${booking.facilityName} — ${booking.destinationAddress}` : booking.destinationAddress)}</strong></div>
-        <div><span>Mobility Need</span><strong>${escapeHtml(formatMobilityLabel(booking.mobilityNeed))}</strong></div>
-        <div><span>Companion / Stairs</span><strong>${booking.hasCompanion ? `${booking.companionCount || 1} Companion` : 'No Companion'} • ${booking.hasStairs ? 'Stairs Present' : 'Step-Free / Ramp'}</strong></div>
+        <div><span>Mobility Need</span><strong>${mobility}</strong></div>
+        <div><span>Companion / Stairs</span><strong>${hasComp ? `${booking.companionCount || 1} Companion` : 'No Companion'} • ${booking.hasStairs ? 'Stairs Present' : 'Step-Free / Ramp'}</strong></div>
       </div>
       ${booking.specialInstructions ? `<div class="voucher-notes"><strong>Special Instructions:</strong> ${escapeHtml(booking.specialInstructions)}</div>` : ''}
       <div class="voucher-foot">

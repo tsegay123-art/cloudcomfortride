@@ -3,8 +3,8 @@ import { getSecret } from 'wix-secrets-backend';
 import { OWNER_EMAIL, sendWixOrResendNotification } from './notificationService';
 
 const INQUIRIES_COLLECTION = 'ContactMessages';
-const CONTACT_OWNER_TEMPLATE_ID = 'contact_owner_notification';
-const CONTACT_CUSTOMER_TEMPLATE_ID = 'contact_customer_acknowledgement';
+const OWNER_CONTACT_SECRET = 'CCR_OWNER_CONTACT_EMAIL_ID';
+const CUSTOMER_CONTACT_SECRET = 'CCR_CUSTOMER_CONTACT_EMAIL_ID';
 
 async function verifyDispatchPin(pin) {
   let expectedPin = '';
@@ -128,7 +128,7 @@ export async function submitInquiry(payload) {
       recipientEmail: OWNER_EMAIL,
       recipientFirstName: 'Cloud Comfort Ride',
       recipientLastName: 'Dispatch',
-      triggeredEmailId: CONTACT_OWNER_TEMPLATE_ID,
+      triggeredEmailSecretName: OWNER_CONTACT_SECRET,
       variables: vars,
       fallbackSubject: `New Contact Inquiry (${messageReference}) — ${fullName}`,
       fallbackHtml: `<p><strong>Ref:</strong> ${messageReference}</p><p><strong>From:</strong> ${fullName} (${email}, ${phone || 'No phone'})</p><p><strong>Topic:</strong> ${subject}</p><p>${message}</p>`
@@ -140,7 +140,7 @@ export async function submitInquiry(payload) {
       recipientFirstName: firstName,
       recipientLastName: lastName,
       recipientPhone: phone,
-      triggeredEmailId: CONTACT_CUSTOMER_TEMPLATE_ID,
+      triggeredEmailSecretName: CUSTOMER_CONTACT_SECRET,
       variables: vars,
       fallbackSubject: `We received your message (${messageReference}) — Cloud Comfort Ride`,
       fallbackHtml: `<p>Hi ${firstName},</p><p>Thank you for contacting Cloud Comfort Ride. Your inquiry reference is <strong>${messageReference}</strong>. Our Seattle team will respond shortly.</p>`

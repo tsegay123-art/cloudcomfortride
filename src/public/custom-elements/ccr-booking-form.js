@@ -255,18 +255,18 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           </style>
           <div class="success-card">
             <div class="success-icon">✓</div>
-            <h3 style="font-size:26px;font-weight:800;color:var(--ink);">Ride Request Received (Status: PENDING)</h3>
+            <h3 style="font-size:26px;font-weight:800;color:var(--ink);">Your transportation request has been received successfully.</h3>
             <p style="font-size:16px;color:var(--ink);margin-top:8px;line-height:1.6;">
-              Your request is saved and awaiting confirmation from our Seattle dispatch team. Save your Booking Reference below to verify status anytime on <strong>My Bookings</strong>.
+              Status: <strong>PENDING OWNER CONFIRMATION</strong>. Our team will review your request and contact you once your driver is assigned.
             </p>
-            <div class="ref-box">${b.id}</div>
+            <div class="ref-box">${b.bookingReference || b.id}</div>
             <div class="summary-grid">
-              <div><span>Passenger</span><strong>${b.passengerName}</strong></div>
-              <div><span>Service</span><strong>${getServiceTitle(b.serviceType)}</strong></div>
-              <div><span>Pickup</span><strong>${b.pickupDate} at ${b.pickupTime}</strong></div>
-              <div><span>From</span><strong>${b.pickupAddress}</strong></div>
+              <div><span>Passenger</span><strong>${b.passengerName || `${b.firstName || ''} ${b.lastName || ''}`.trim()}</strong></div>
+              <div><span>Requested Service</span><strong>${getServiceTitle(b.serviceType)}</strong></div>
+              <div><span>Pickup Date &amp; Time</span><strong>${b.pickupDate} at ${b.pickupTime}</strong></div>
+              <div><span>Pickup Address</span><strong>${b.pickupAddress}</strong></div>
               <div><span>Destination</span><strong>${b.destinationAddress}</strong></div>
-              <div><span>Dispatch Phone</span><strong>${COMPANY_INFO.phoneDisplay}</strong></div>
+              <div><span>Next Steps</span><strong>Awaiting owner confirmation</strong></div>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
               <button class="dt-button" id="toggle-voucher">${this._showVoucher ? 'Hide Trip Voucher' : 'View Printable Voucher'}</button>

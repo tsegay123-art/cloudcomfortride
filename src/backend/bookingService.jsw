@@ -4,8 +4,8 @@ import { getServiceTitle } from 'public/companyData';
 import { OWNER_EMAIL, sendWixOrResendNotification } from './notificationService';
 
 const BOOKINGS_COLLECTION = 'Bookings';
-const OWNER_EMAIL_TEMPLATE_ID = 'booking_owner_notification';
-const CUSTOMER_EMAIL_TEMPLATE_ID = 'booking_customer_confirmation';
+const OWNER_BOOKING_SECRET = 'CCR_OWNER_BOOKING_EMAIL_ID';
+const CUSTOMER_BOOKING_SECRET = 'CCR_CUSTOMER_BOOKING_EMAIL_ID';
 
 async function verifyDispatchPin(pin) {
   let expectedPin = '';
@@ -32,7 +32,14 @@ function validateServerBooking(data) {
   const email = String(data.email || '').trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Valid email address is required';
 
-  if (!data.pickupDate) errors.pickupDate = 'Pickup date is required';
+  if (!data.pickupDate) {
+    errors.pickupDate = 'Pickup date is required';
+  } else {
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (String(data.pickupDate) < todayStr) {
+      errors.pickupDate = 'Pickup date cannot be in the past';
+    }
+  }
   if (!data.pickupTime) errors.pickupTime = 'Pickup time is required';
   if (data.tripType === 'round_trip' && !data.returnTime) {
     errors.returnTime = 'Return time is required for round trips';
@@ -113,23 +120,12 @@ export async function submitBooking(payload) {
 
   const record = {
     bookingReference,
-    bookingId: bookingReference,
-    id: bookingReference,
-    clientRequestId,
-    submissionDate: nowIso,
-    createdAt: nowIso,
-    bookingStatus: 'PENDING',
-    status: 'PENDING',
     firstName,
     lastName,
-    passengerName: `${firstName} ${lastName}`,
     email,
-    passengerEmail: email,
     phone,
-    passengerPhone: phone,
     serviceType: String(payload.serviceType),
-    serviceTitle,
-    vehiclePreference: String(payload.vehiclePreference || 'best_match'),
+    vehicleOption: String(payload.vehiclePreference || payload.vehicleOption || 'best_match'),
     tripType: payload.tripType === 'one_way' ? 'one_way' : 'round_trip',
     pickupDate,
     pickupTime,
@@ -138,28 +134,27 @@ export async function submitBooking(payload) {
     pickupNotes: String(payload.pickupNotes || '').trim(),
     facilityName: String(payload.facilityName || '').trim(),
     destinationAddress,
-    department: String(payload.destinationNotes || '').trim(),
-    destinationNotes: String(payload.destinationNotes || '').trim(),
-    mobilityRequirement: String(payload.mobilityNeed || 'ambulatory'),
-    mobilityNeed: String(payload.mobilityNeed || 'ambulatory'),
-    companionRequired: Boolean(payload.hasCompanion),
-    hasCompanion: Boolean(payload.hasCompanion),
-    companionCount: payload.hasCompanion ? Number(payload.companionCount || 1) : 0,
-    hasStairs: Boolean(payload.hasStairs),
-    specialInstructions: String(payload.specialInstructions || '').trim(),
+    department: String(payload.destinationNotes || payload.department || '').trim(),
+    mobilityRequirement: String(payload.mobilityNeed || payload.mobilityRequirement || 'ambulatory'),
+    companionRequired: Boolean(payload.hasCompanion ?? payload.companionRequired),
+    bookingStatus: 'PENDING',
+    submissionDate: nowIso,
     ownerNotes: '',
-    notificationStatus: 'PENDING'
+    notificationStatus: 'PENDING',
+    clientRequestId,
+    specialInstructions: String(payload.specialInstructions || '').trim()
   };
 
   let insertedItem = null;
   try {
     insertedItem = await wixData.insert(BOOKINGS_COLLECTION, record, { suppressAuth: true });
   } catch (err) {
-    console.error('Bookings CMS insert failed:', err && err.message ? err.message : err);
+    const reason = err && err.message ? err.message : 'Unknown database error';
+    console.error('Bookings CMS insert failed:', reason);
     return {
       success: false,
       persistedToCms: false,
-      message: 'Unable to store your booking in the dispatch database. Please call (206) 327-4411 so we can assist you immediately.'
+      message: 'We could not save your booking request right now. Please try again in a moment.'
     };
   }
 
@@ -167,7 +162,7 @@ export async function submitBooking(payload) {
     bookingId: bookingReference,
     bookingReference,
     serviceTitle,
-    vehiclePreference: record.vehiclePreference,
+    vehicleOption: record.vehicleOption,
     tripType: record.tripType === 'round_trip' ? 'Round Trip' : 'One-Way',
     pickupDate: record.pickupDate,
     pickupTime: record.pickupTime,
@@ -176,34 +171,34 @@ export async function submitBooking(payload) {
     pickupNotes: record.pickupNotes || 'None',
     facilityName: record.facilityName || 'N/A',
     destinationAddress: record.destinationAddress,
-    destinationNotes: record.department || 'None',
-    passengerName: record.passengerName,
+    department: record.department || 'None',
+    passengerName: `${firstName} ${lastName}`,
     passengerPhone: record.phone,
     passengerEmail: record.email,
-    mobilityNeed: record.mobilityRequirement,
-    companions: record.hasCompanion ? String(record.companionCount) : '0',
-    stairs: record.hasStairs ? 'Yes' : 'No',
+    mobilityRequirement: record.mobilityRequirement,
+    companionRequired: record.companionRequired ? 'Yes' : 'No',
     specialInstructions: record.specialInstructions || 'None',
     bookingStatus: 'PENDING'
   };
 
   const ownerHtml = `
     <h2>New Cloud Comfort Ride Booking Request (${bookingReference})</h2>
-    <p><strong>Status:</strong> PENDING CONFIRMATION</p>
-    <p><strong>Passenger:</strong> ${record.passengerName} | <strong>Phone:</strong> ${record.phone} | <strong>Email:</strong> ${record.email}</p>
-    <p><strong>Service:</strong> ${serviceTitle} (${emailVars.tripType}) | <strong>Vehicle:</strong> ${record.vehiclePreference}</p>
+    <p><strong>Status:</strong> PENDING OWNER CONFIRMATION</p>
+    <p><strong>Passenger:</strong> ${firstName} ${lastName} | <strong>Phone:</strong> ${record.phone} | <strong>Email:</strong> ${record.email}</p>
+    <p><strong>Service:</strong> ${serviceTitle} (${emailVars.tripType}) | <strong>Vehicle:</strong> ${record.vehicleOption}</p>
     <p><strong>Pickup:</strong> ${record.pickupDate} at ${record.pickupTime} — ${record.pickupAddress} (Notes: ${emailVars.pickupNotes})</p>
-    <p><strong>Destination:</strong> ${record.facilityName ? `${record.facilityName} — ` : ''}${record.destinationAddress} (${emailVars.destinationNotes})</p>
-    <p><strong>Mobility:</strong> ${record.mobilityRequirement} | <strong>Companions:</strong> ${emailVars.companions} | <strong>Stairs:</strong> ${emailVars.stairs}</p>
+    <p><strong>Destination:</strong> ${record.facilityName ? `${record.facilityName} — ` : ''}${record.destinationAddress} (${emailVars.department})</p>
+    <p><strong>Mobility:</strong> ${record.mobilityRequirement} | <strong>Companion Required:</strong> ${emailVars.companionRequired}</p>
     <p><strong>Special Instructions:</strong> ${emailVars.specialInstructions}</p>
     <p>Manage &amp; Confirm in Owner Dispatch: https://www.cloudcomfortride.com/owner-dispatch</p>
   `;
 
   const customerHtml = `
-    <h2>Thank you for your ride request, ${firstName}!</h2>
-    <p>Your Cloud Comfort Ride booking request (<strong>${bookingReference}</strong>) has been received and is currently <strong>PENDING</strong> dispatch confirmation.</p>
-    <p><strong>Service:</strong> ${serviceTitle}<br/><strong>Pickup:</strong> ${record.pickupDate} at ${record.pickupTime} from ${record.pickupAddress}<br/><strong>Destination:</strong> ${record.destinationAddress}</p>
-    <p>Our Seattle dispatch team will contact you shortly to confirm your vehicle assignment. For immediate updates, call (206) 327-4411.</p>
+    <h2>Your transportation request has been received successfully.</h2>
+    <p>Dear ${firstName},</p>
+    <p>Your Cloud Comfort Ride request (<strong>${bookingReference}</strong>) has been saved and is currently <strong>PENDING</strong> owner confirmation.</p>
+    <p><strong>Requested Service:</strong> ${serviceTitle}<br/><strong>Pickup Date &amp; Time:</strong> ${record.pickupDate} at ${record.pickupTime}<br/><strong>Pickup:</strong> ${record.pickupAddress}<br/><strong>Destination:</strong> ${record.destinationAddress}</p>
+    <p>Our team will review your request and send a confirmation once your driver is assigned. Your ride is not confirmed until you receive confirmation from Cloud Comfort Ride.</p>
   `;
 
   const [ownerResult, customerResult] = await Promise.all([
@@ -213,9 +208,9 @@ export async function submitBooking(payload) {
       recipientEmail: OWNER_EMAIL,
       recipientFirstName: 'Cloud Comfort Ride',
       recipientLastName: 'Dispatch',
-      triggeredEmailId: OWNER_EMAIL_TEMPLATE_ID,
+      triggeredEmailSecretName: OWNER_BOOKING_SECRET,
       variables: emailVars,
-      fallbackSubject: `New Booking Request ${bookingReference} — ${record.passengerName}`,
+      fallbackSubject: `New Booking Request ${bookingReference} — ${firstName} ${lastName}`,
       fallbackHtml: ownerHtml
     }),
     sendWixOrResendNotification({
@@ -225,7 +220,7 @@ export async function submitBooking(payload) {
       recipientFirstName: firstName,
       recipientLastName: lastName,
       recipientPhone: record.phone,
-      triggeredEmailId: CUSTOMER_EMAIL_TEMPLATE_ID,
+      triggeredEmailSecretName: CUSTOMER_BOOKING_SECRET,
       variables: emailVars,
       fallbackSubject: `Cloud Comfort Ride Request Received (${bookingReference})`,
       fallbackHtml: customerHtml
@@ -360,7 +355,7 @@ export async function requestBookingConfirmation(bookingReference) {
     recipientEmail: OWNER_EMAIL,
     recipientFirstName: 'Cloud Comfort Ride',
     recipientLastName: 'Dispatch',
-    triggeredEmailId: OWNER_EMAIL_TEMPLATE_ID,
+    triggeredEmailSecretName: OWNER_BOOKING_SECRET,
     variables: {
       bookingId: ref,
       bookingReference: ref,
@@ -437,7 +432,7 @@ export async function updateBookingStatus(pin, bookingReference, nextStatus, own
         recipientEmail: customerEmail,
         recipientFirstName: updated.firstName || 'Passenger',
         recipientLastName: updated.lastName || '',
-        triggeredEmailId: CUSTOMER_EMAIL_TEMPLATE_ID,
+        triggeredEmailSecretName: CUSTOMER_BOOKING_SECRET,
         variables: {
           bookingId: updated.bookingReference,
           bookingReference: updated.bookingReference,
