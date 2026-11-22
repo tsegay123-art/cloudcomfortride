@@ -34,6 +34,81 @@ async function verifyDispatchPin(pin) {
   return Boolean(pin && String(pin).trim() === String(expectedPin).trim());
 }
 
+function getRecordRef(item) {
+  return String((item && (item.bookingId || item.bookingReference || item._id)) || '').trim();
+}
+
+function getRecordEmail(item) {
+  return String((item && (item.emailAddress || item.email || item.customerEmail || item.passengerEmail)) || '').trim();
+}
+
+function getRecordPhone(item) {
+  return String((item && (item.contactPhone || item.phone || item.passengerPhone)) || '').trim();
+}
+
+function getRecordStatus(item) {
+  const raw = String((item && (item.bookingStatus || item.status)) || 'Pending').trim().toLowerCase();
+  if (raw === 'confirmed') return 'Confirmed';
+  if (raw === 'rejected') return 'Rejected';
+  if (raw === 'completed') return 'Completed';
+  if (raw === 'cancelled' || raw === 'canceled') return 'Cancelled';
+  return 'Pending';
+}
+
+function normalizeStatusTitle(nextStatus) {
+  const raw = String(nextStatus || '').trim().toLowerCase();
+  if (raw === 'confirmed') return 'Confirmed';
+  if (raw === 'rejected') return 'Rejected';
+  if (raw === 'completed') return 'Completed';
+  if (raw === 'cancelled' || raw === 'canceled') return 'Cancelled';
+  if (raw === 'pending' || raw === 'pending_review') return 'Pending';
+  return '';
+}
+
+function matchesSearchQuery(item, query) {
+  const q = String(query || '').trim();
+  if (!q) return true;
+  const qLower = q.toLowerCase();
+  const qDigits = q.replace(/\D/g, '');
+
+  const refMatch = getRecordRef(item).toLowerCase().includes(qLower);
+  const emailMatch = getRecordEmail(item).toLowerCase().includes(qLower);
+  const phoneDigits = getRecordPhone(item).replace(/\D/g, '');
+  const phoneMatch = qDigits.length >= 3 && phoneDigits.includes(qDigits);
+
+  return refMatch || emailMatch || phoneMatch;
+}
+
+function sanitizeCustomerBooking(item) {
+  return {
+    bookingId: getRecordRef(item),
+    bookingReference: getRecordRef(item),
+    bookingStatus: getRecordStatus(item),
+    status: getRecordStatus(item),
+    serviceType: item.serviceType || '',
+    serviceTitle: item.serviceTitle || getServiceTitle(item.serviceType || ''),
+    vehicleOption: item.vehicleOption || 'best_match',
+    tripType: item.tripType || 'round_trip',
+    pickupDate: item.pickupDate || '',
+    pickupTime: item.pickupTime || '',
+    estimatedReturnTime: item.estimatedReturnTime || item.returnTime || '',
+    pickupAddress: item.pickupAddress || '',
+    pickupNotes: item.pickupNotes || '',
+    facilityName: item.facilityName || '',
+    destinationAddress: item.destinationAddress || '',
+    departmentSuite: item.departmentSuite || '',
+    passengerFirstName: item.passengerFirstName || item.firstName || '',
+    passengerLastName: item.passengerLastName || item.lastName || '',
+    passengerName: item.passengerName || `${item.passengerFirstName || item.firstName || ''} ${item.passengerLastName || item.lastName || ''}`.trim(),
+    contactPhone: getRecordPhone(item),
+    emailAddress: getRecordEmail(item),
+    mobilityRequirements: item.mobilityRequirements || 'ambulatory',
+    rejectionReason: item.rejectionReason || '',
+    createdAt: item.createdAt || '',
+    updatedAt: item.updatedAt || ''
+  };
+}
+
 function validateServerBooking(data) {
   const errors = {};
   if (!data || typeof data !== 'object') {
@@ -232,7 +307,7 @@ export async function submitBooking(payload) {
     <p><strong>Destination:</strong> ${record.facilityName ? `${record.facilityName} — ` : ''}${record.destinationAddress} (${emailVars.department})</p>
     <p><strong>Mobility:</strong> ${record.mobilityRequirements} | <strong>Companion:</strong> ${emailVars.companionRequired}</p>
     <p><strong>Special Instructions:</strong> ${emailVars.specialInstructions}</p>
-    <p>Manage &amp; Confirm in Owner Dispatch: https://www.cloudcomfortride.com/owner-dispatch</p>
+    <p>Review &amp; Manage Booking: https://www.cloudcomfortride.com/admin/bookings</p>
   `;
 
   const customerHtml = `
@@ -296,6 +371,57 @@ export async function submitBooking(payload) {
       notificationStatus
     }
   };
+}
+
+/**
+ * Customer My Bookings lookup: single search input supporting OR logic across:
+ * 1) Booking reference, OR
+ * 2) Customer email address (case-insensitive), OR
+ * 3) Customer phone number (normalized digits).
+ * Customers can view live CMS status and trip details, never modify status.
+ */
+export async function searchCustomerBookings(query) {
+  const q = String(query || '').trim();
+  const qDigits = q.replace(/\D/g, '');
+  if (!q || (q.length < 3 && qDigits.length < 3)) {
+    return {
+      success: false,
+      items: [],
+      message: 'Please enter a Booking Reference (e.g. CCR-2026-7685), Email Address, or Phone Number.'
+    };
+  }
+
+  const collectionId = await resolveBookingsCollectionId();
+  if (!collectionId) {
+    return { success: false, items: [], message: 'Booking database is unavailable right now.' };
+  }
+
+  try {
+    const res = await wixData.query(collectionId)
+      .descending('createdAt')
+      .limit(500)
+      .find({ suppressAuth: true });
+
+    const matched = (res.items || [])
+      .filter((item) => matchesSearchQuery(item, q))
+      .map(sanitizeCustomerBooking);
+
+    if (!matched.length) {
+      return {
+        success: false,
+        items: [],
+        message: 'No booking found matching that Booking Reference, Email Address, or Phone Number.'
+      };
+    }
+
+    return { success: true, items: matched };
+  } catch (err) {
+    return {
+      success: false,
+      items: [],
+      message: 'Unable to reach booking lookup service.'
+    };
+  }
 }
 
 /**
@@ -423,43 +549,73 @@ export async function requestBookingConfirmation(bookingReference) {
 }
 
 /**
- * Owner Dispatch: list all bookings from the active Wix CMS collection.
+ * Admin Dashboard: list all bookings from the active Wix CMS collection ('Import 1').
  */
-export async function listAllBookings(pin) {
+export async function listAllBookings(pin, statusFilter = 'all') {
   const ok = await verifyDispatchPin(pin);
   if (!ok) {
-    return { success: false, message: 'Invalid Dispatch PIN.', items: [] };
+    return { success: false, message: 'Unauthorized: Invalid Administrator PIN.', items: [] };
   }
 
   const collectionId = await resolveBookingsCollectionId();
   if (!collectionId) {
-    return { success: false, items: [], message: 'Bookings CMS collection (Import 1 / Bookings) not found.' };
+    return { success: false, items: [], message: 'Bookings CMS collection (Import 1) not found.' };
   }
 
+  let items = [];
   try {
     const res = await wixData.query(collectionId)
       .descending('createdAt')
-      .limit(100)
+      .limit(500)
       .find({ suppressAuth: true });
-    return { success: true, collectionId, items: res.items || [] };
+    items = res.items || [];
   } catch (err) {
-    const resFallback = await wixData.query(collectionId).limit(100).find({ suppressAuth: true });
-    return { success: true, collectionId, items: resFallback.items || [] };
+    const resFallback = await wixData.query(collectionId).limit(500).find({ suppressAuth: true });
+    items = resFallback.items || [];
   }
+
+  const normalizedFilter = normalizeStatusTitle(statusFilter);
+  const filtered = (statusFilter && statusFilter !== 'all' && normalizedFilter)
+    ? items.filter((item) => getRecordStatus(item) === normalizedFilter)
+    : items;
+
+  return { success: true, collectionId, items: filtered };
 }
 
 /**
- * Owner Dispatch: update booking status ('CONFIRMED', 'REJECTED', 'CANCELLED', 'COMPLETED', 'PENDING') + ownerNotes.
+ * Admin Dashboard: search bookings using OR logic (Booking reference OR Email OR Phone).
+ */
+export async function searchAdminBookings(pin, searchQuery = '', statusFilter = 'all') {
+  const ok = await verifyDispatchPin(pin);
+  if (!ok) {
+    return { success: false, message: 'Unauthorized: Invalid Administrator PIN.', items: [] };
+  }
+
+  const base = await listAllBookings(pin, statusFilter);
+  if (!base.success) return base;
+
+  const q = String(searchQuery || '').trim();
+  const matched = q ? base.items.filter((item) => matchesSearchQuery(item, q)) : base.items;
+  return {
+    success: true,
+    collectionId: base.collectionId,
+    items: matched,
+    message: matched.length ? '' : 'No matching bookings found for that reference, email, or phone number.'
+  };
+}
+
+/**
+ * Admin Dashboard: update booking status ('Pending', 'Confirmed', 'Rejected', 'Completed', 'Cancelled')
+ * and record rejection reason / ownerNotes in Live CMS.
  */
 export async function updateBookingStatus(pin, bookingReference, nextStatus, ownerNotes = '') {
   const ok = await verifyDispatchPin(pin);
   if (!ok) {
-    return { success: false, message: 'Invalid Dispatch PIN.' };
+    return { success: false, message: 'Unauthorized: Invalid Administrator PIN.' };
   }
 
-  const normalized = String(nextStatus || '').toUpperCase();
-  const allowed = ['CONFIRMED', 'REJECTED', 'CANCELLED', 'COMPLETED', 'PENDING'];
-  if (!allowed.includes(normalized)) {
+  const normalized = normalizeStatusTitle(nextStatus);
+  if (!normalized) {
     return { success: false, message: 'Invalid booking status.' };
   }
 
@@ -469,7 +625,7 @@ export async function updateBookingStatus(pin, bookingReference, nextStatus, own
   }
 
   try {
-    const ref = String(bookingReference).trim();
+    const ref = String(bookingReference || '').trim();
     const res = await wixData.query(collectionId)
       .eq('bookingId', ref)
       .or(wixData.query(collectionId).eq('bookingReference', ref))
@@ -481,21 +637,29 @@ export async function updateBookingStatus(pin, bookingReference, nextStatus, own
     }
 
     const current = res.items[0];
+    const currentStatus = getRecordStatus(current);
+
+    if (normalized === 'Confirmed' && currentStatus === 'Confirmed') {
+      return { success: false, duplicate: true, message: `Booking ${ref} is already Confirmed.` };
+    }
+
+    const reasonText = String(ownerNotes || '').trim();
     const updated = {
       ...current,
       bookingStatus: normalized,
       status: normalized,
-      ownerNotes: ownerNotes !== undefined ? String(ownerNotes).trim() : (current.ownerNotes || ''),
+      ownerNotes: reasonText || current.ownerNotes || '',
+      rejectionReason: normalized === 'Rejected' ? (reasonText || current.rejectionReason || '') : (current.rejectionReason || ''),
       updatedAt: new Date().toISOString()
     };
     await wixData.update(collectionId, updated, { suppressAuth: true });
 
-    const customerEmail = updated.emailAddress || updated.email || updated.passengerEmail;
-    const refOut = updated.bookingId || updated.bookingReference;
-    if ((normalized === 'CONFIRMED' || normalized === 'REJECTED') && customerEmail) {
+    const customerEmail = getRecordEmail(updated);
+    const refOut = getRecordRef(updated);
+    if ((normalized === 'Confirmed' || normalized === 'Rejected') && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
       await sendWixOrResendNotification({
         relatedRecordReference: refOut,
-        notificationType: `CUSTOMER_STATUS_${normalized}`,
+        notificationType: `CUSTOMER_STATUS_${normalized.toUpperCase()}`,
         recipientEmail: customerEmail,
         recipientFirstName: updated.passengerFirstName || updated.firstName || 'Passenger',
         recipientLastName: updated.passengerLastName || updated.lastName || '',
@@ -510,15 +674,66 @@ export async function updateBookingStatus(pin, bookingReference, nextStatus, own
           destinationAddress: updated.destinationAddress,
           passengerName: updated.passengerName || `${updated.passengerFirstName || ''} ${updated.passengerLastName || ''}`.trim(),
           bookingStatus: normalized,
-          specialInstructions: `Status: ${normalized}${updated.ownerNotes ? ` — ${updated.ownerNotes}` : ''}`
+          specialInstructions: `Status: ${normalized}${reasonText ? ` — ${reasonText}` : ''}`
         },
         fallbackSubject: `Cloud Comfort Ride Booking ${normalized} (${refOut})`,
-        fallbackHtml: `<p>Your Cloud Comfort Ride booking <strong>${refOut}</strong> is now <strong>${normalized}</strong>.</p><p>${updated.ownerNotes || ''}</p>`
+        fallbackHtml: `<p>Your Cloud Comfort Ride booking <strong>${refOut}</strong> is now <strong>${normalized}</strong>.</p>${reasonText ? `<p><strong>Details:</strong> ${reasonText}</p>` : ''}`
       });
     }
 
     return { success: true, booking: updated };
   } catch (err) {
-    return { success: false, message: 'Unable to update booking status.' };
+    return { success: false, message: 'Unable to update booking status in CMS.' };
+  }
+}
+
+/**
+ * Admin Dashboard: edit booking trip/schedule/vehicle/notes in Live CMS.
+ */
+export async function editBookingDetails(pin, bookingReference, updates = {}) {
+  const ok = await verifyDispatchPin(pin);
+  if (!ok) {
+    return { success: false, message: 'Unauthorized: Invalid Administrator PIN.' };
+  }
+
+  const collectionId = await resolveBookingsCollectionId();
+  if (!collectionId) {
+    return { success: false, message: 'Booking collection not found.' };
+  }
+
+  try {
+    const ref = String(bookingReference || '').trim();
+    const res = await wixData.query(collectionId)
+      .eq('bookingId', ref)
+      .or(wixData.query(collectionId).eq('bookingReference', ref))
+      .limit(1)
+      .find({ suppressAuth: true });
+
+    if (!res.items || res.items.length === 0) {
+      return { success: false, message: 'Booking not found in CMS.' };
+    }
+
+    const current = res.items[0];
+    const nextStatus = updates.bookingStatus ? normalizeStatusTitle(updates.bookingStatus) : getRecordStatus(current);
+    const updated = {
+      ...current,
+      serviceType: updates.serviceType !== undefined ? String(updates.serviceType) : current.serviceType,
+      serviceTitle: updates.serviceType !== undefined ? getServiceTitle(String(updates.serviceType)) : current.serviceTitle,
+      vehicleOption: updates.vehicleOption !== undefined ? String(updates.vehicleOption) : current.vehicleOption,
+      pickupDate: updates.pickupDate !== undefined ? String(updates.pickupDate) : current.pickupDate,
+      pickupTime: updates.pickupTime !== undefined ? String(updates.pickupTime) : current.pickupTime,
+      estimatedReturnTime: updates.estimatedReturnTime !== undefined ? String(updates.estimatedReturnTime) : (current.estimatedReturnTime || ''),
+      pickupAddress: updates.pickupAddress !== undefined ? String(updates.pickupAddress).trim() : current.pickupAddress,
+      destinationAddress: updates.destinationAddress !== undefined ? String(updates.destinationAddress).trim() : current.destinationAddress,
+      ownerNotes: updates.ownerNotes !== undefined ? String(updates.ownerNotes).trim() : (current.ownerNotes || ''),
+      bookingStatus: nextStatus || getRecordStatus(current),
+      status: nextStatus || getRecordStatus(current),
+      updatedAt: new Date().toISOString()
+    };
+
+    await wixData.update(collectionId, updated, { suppressAuth: true });
+    return { success: true, booking: updated };
+  } catch (err) {
+    return { success: false, message: 'Unable to save booking edits in CMS.' };
   }
 }

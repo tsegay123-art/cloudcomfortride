@@ -2,7 +2,15 @@ import wixLocationFrontend from 'wix-location-frontend';
 import wixSiteFrontend from 'wix-site-frontend';
 import wixSeoFrontend from 'wix-seo-frontend';
 import { session } from 'wix-storage-frontend';
-import { submitBooking, lookupVerifiedBooking, cancelBooking, requestBookingConfirmation, listAllBookings, updateBookingStatus } from 'backend/bookingService.jsw';
+import {
+  submitBooking,
+  searchCustomerBookings,
+  lookupVerifiedBooking,
+  listAllBookings,
+  searchAdminBookings,
+  updateBookingStatus,
+  editBookingDetails
+} from 'backend/bookingService.jsw';
 import { submitInquiry, listAllInquiries, resolveInquiry } from 'backend/contactService.jsw';
 import { COMPANY_INFO } from './companyData';
 
@@ -25,7 +33,8 @@ const ROUTE_ALIASES = {
   '/privacy': { urls: ['/privacy', '/privacy-policy'], names: ['privacy policy', 'privacy'] },
   '/terms': { urls: ['/terms', '/terms-of-service'], names: ['terms of service', 'terms'] },
   '/accessibility': { urls: ['/accessibility', '/accessibility-statement'], names: ['accessibility statement', 'accessibility'] },
-  '/owner-dispatch': { urls: ['/owner-dispatch', '/dispatch'], names: ['owner dispatch', 'dispatch'] }
+  '/owner-dispatch': { urls: ['/admin/bookings', '/admin-bookings', '/owner-dispatch', '/dispatch'], names: ['admin bookings', 'owner dispatch', 'dispatch'] },
+  '/admin/bookings': { urls: ['/admin/bookings', '/admin-bookings', '/owner-dispatch', '/dispatch'], names: ['admin bookings', 'owner dispatch', 'dispatch'] }
 };
 
 function resolveWixRoute(requestedPath) {
@@ -430,21 +439,13 @@ export async function wireMyBookingsElement(selector) {
 
   targets.forEach((el) => {
     if (!markWired(el, 'myBookings')) return;
-    el.on('removeBooking', async (event) => {
-      const detail = (event && event.detail) || {};
-      if (detail.bookingId) {
-        try {
-          await cancelBooking(detail.bookingId, detail.verifier || '');
-        } catch (e) {
-          // Local storage removal still proceeds in the custom element
-        }
-      }
-    });
-
     el.on('lookupBooking', async (event) => {
       const detail = (event && event.detail) || {};
+      const query = String(detail.query || detail.bookingReference || '').trim();
       try {
-        const res = await lookupVerifiedBooking(detail.bookingReference, detail.verifier);
+        const res = detail.verifier
+          ? await lookupVerifiedBooking(query, detail.verifier)
+          : await searchCustomerBookings(query);
         if (res && res.success && Array.isArray(res.items)) {
           el.setAttribute('lookup-error', '');
           el.setAttribute('server-bookings', JSON.stringify(res.items));
@@ -453,18 +454,6 @@ export async function wireMyBookingsElement(selector) {
         }
       } catch (e) {
         el.setAttribute('lookup-error', 'Unable to look up booking right now. Please call (206) 327-4411.');
-      }
-    });
-
-    el.on('requestConfirmation', async (event) => {
-      const detail = (event && event.detail) || {};
-      if (detail.bookingId) {
-        try {
-          await requestBookingConfirmation(detail.bookingId);
-          el.setAttribute('confirmation-requested', detail.bookingId);
-        } catch (e) {
-          // Ignore
-        }
       }
     });
   });
@@ -510,6 +499,40 @@ export function wireDispatchElement(selector) {
         }
       } catch (err) {
         el.setAttribute('dispatch-error', 'Failed to update booking.');
+      }
+    });
+
+    el.on('searchBookings', async (event) => {
+      const detail = (event && event.detail) || {};
+      try {
+        const res = await searchAdminBookings(detail.pin || '', detail.query || '', detail.statusFilter || 'all');
+        if (res && res.success) {
+          el.setAttribute('dispatch-error', res.message || '');
+          el.setAttribute('dispatch-search-results', JSON.stringify(res.items || []));
+        } else {
+          el.setAttribute('dispatch-error', (res && res.message) || 'Search failed.');
+        }
+      } catch (err) {
+        el.setAttribute('dispatch-error', 'Unable to search bookings.');
+      }
+    });
+
+    el.on('editBooking', async (event) => {
+      const detail = (event && event.detail) || {};
+      try {
+        const res = await editBookingDetails(detail.pin || '', detail.bookingId, detail.updates || {});
+        if (res && res.success) {
+          const [bRes, iRes] = await Promise.all([listAllBookings(detail.pin), listAllInquiries(detail.pin)]);
+          el.setAttribute('dispatch-error', '');
+          el.setAttribute('dispatch-data', JSON.stringify({
+            bookings: (bRes && bRes.items) || [],
+            inquiries: (iRes && iRes.items) || []
+          }));
+        } else {
+          el.setAttribute('dispatch-error', (res && res.message) || 'Failed to update booking details.');
+        }
+      } catch (err) {
+        el.setAttribute('dispatch-error', 'Failed to update booking details.');
       }
     });
 
