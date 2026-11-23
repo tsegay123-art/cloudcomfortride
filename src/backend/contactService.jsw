@@ -1,6 +1,6 @@
 import wixData from 'wix-data';
-import { getSecret } from 'wix-secrets-backend';
 import { OWNER_EMAIL, sendWixOrResendNotification } from './notificationService';
+import { verifyAdminAccess } from './authService.jsw';
 
 const CONTACT_COLLECTION_CANDIDATES = ['ContactSubmissions', 'ContactMessages'];
 let resolvedContactCollection = null;
@@ -21,14 +21,9 @@ async function resolveContactCollectionId() {
 const OWNER_CONTACT_SECRET = 'CCR_OWNER_CONTACT_EMAIL_ID';
 const CUSTOMER_CONTACT_SECRET = 'CCR_CUSTOMER_CONTACT_EMAIL_ID';
 
-async function verifyDispatchPin(pin) {
-  let expectedPin = '';
-  try {
-    expectedPin = await getSecret('CCR_DISPATCH_PIN');
-  } catch (e) {
-    expectedPin = '2023';
-  }
-  return Boolean(pin && String(pin).trim() === String(expectedPin).trim());
+async function verifyDispatchPin(pinOrToken) {
+  const res = await verifyAdminAccess(pinOrToken);
+  return Boolean(res && res.authorized);
 }
 
 /**

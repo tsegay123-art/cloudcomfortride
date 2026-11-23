@@ -1,7 +1,22 @@
 import wixData from 'wix-data';
-import { getSecret } from 'wix-secrets-backend';
 import { COMPANY_INFO, getServiceTitle } from 'public/companyData';
 import { sendWixOrResendNotification } from './notificationService';
+import { verifyAdminAccess, recordAdminAudit, ROLES } from './authService.jsw';
+import {
+  listWixServices,
+  queryWixServiceAvailability,
+  createWixBookingRecord,
+  confirmWixBookingRecord,
+  declineWixBookingRecord,
+  cancelWixBookingRecord,
+  queryAllWixBookings
+} from './wixBookingsIntegration';
+import {
+  upsertRideOperation,
+  listRideOperations,
+  listDrivers,
+  listVehicles
+} from './rideOperationsService';
 
 const CANDIDATE_BOOKING_COLLECTIONS = ['Import1', 'Import_1', 'Import 1', 'Bookings'];
 let cachedCollectionId = '';
@@ -24,14 +39,17 @@ async function resolveBookingsCollectionId() {
   return '';
 }
 
-async function verifyDispatchPin(pin) {
-  let expectedPin = '';
-  try {
-    expectedPin = await getSecret('CCR_DISPATCH_PIN');
-  } catch (e) {
-    expectedPin = '2023';
-  }
-  return Boolean(pin && String(pin).trim() === String(expectedPin).trim());
+async function verifyDispatchPin(pinOrToken, allowedRoles = [ROLES.SUPER_ADMIN, ROLES.BOOKING_MANAGER, ROLES.DISPATCHER, ROLES.CUSTOMER_SUPPORT]) {
+  const res = await verifyAdminAccess(pinOrToken, allowedRoles);
+  return res.authorized ? res.user : null;
+}
+
+export async function getWixBookingCatalog() {
+  return listWixServices();
+}
+
+export async function getWixAvailability(serviceId, pickupDate) {
+  return queryWixServiceAvailability(serviceId, pickupDate);
 }
 
 function getRecordRef(item) {
@@ -222,9 +240,16 @@ export async function submitBooking(payload) {
   const hasCompanion = Boolean(payload.hasCompanion ?? payload.companionRequired);
   const companionCount = hasCompanion ? Number(payload.companionCount || 1) : 0;
 
+  // Attempt real Wix Bookings V2 creation so booking appears in Wix Dashboard Calendar & Booking Requests
+  const wixRes = await createWixBookingRecord(payload, bookingId);
+
   const record = {
     bookingId,
     bookingReference: bookingId,
+    wixBookingId: wixRes.wixBookingId || '',
+    wixRevision: wixRes.wixRevision || '',
+    wixStatus: wixRes.wixStatus || (wixRes.createdInWix ? 'PENDING' : 'CMS_ONLY'),
+    wixServiceId: wixRes.wixServiceId || '',
     createdAt: nowIso,
     updatedAt: nowIso,
     bookingStatus: 'Pending',
@@ -274,6 +299,17 @@ export async function submitBooking(payload) {
       message: `Unable to save booking to CMS (${collectionId}): ${reason}`
     };
   }
+
+  await upsertRideOperation({
+    bookingId: wixRes.wixBookingId || bookingId,
+    bookingReference: bookingId,
+    dispatchStatus: 'Pending Review',
+    pickupInstructions: record.pickupNotes,
+    accessibilityRequirements: record.mobilityRequirements,
+    facilityName: record.facilityName,
+    departmentSuite: record.departmentSuite,
+    adminNotes: wixRes.createdInWix ? `Linked Wix Booking ID: ${wixRes.wixBookingId}` : `Wix Bookings note: ${wixRes.message || 'Pending Wix service mapping'}`
+  });
 
   const emailVars = {
     bookingId,
@@ -549,12 +585,12 @@ export async function requestBookingConfirmation(bookingReference) {
 }
 
 /**
- * Admin Dashboard: list all bookings from the active Wix CMS collection ('Import 1').
+ * Admin Dashboard: list all bookings merged from Import 1, Wix Bookings V2, and RideOperations.
  */
-export async function listAllBookings(pin, statusFilter = 'all') {
-  const ok = await verifyDispatchPin(pin);
-  if (!ok) {
-    return { success: false, message: 'Unauthorized: Invalid Administrator PIN.', items: [] };
+export async function listAllBookings(pinOrToken, statusFilter = 'all') {
+  const adminUser = await verifyDispatchPin(pinOrToken);
+  if (!adminUser) {
+    return { success: false, message: 'Unauthorized: Invalid Administrator PIN or session.', items: [] };
   }
 
   const collectionId = await resolveBookingsCollectionId();
@@ -562,24 +598,91 @@ export async function listAllBookings(pin, statusFilter = 'all') {
     return { success: false, items: [], message: 'Bookings CMS collection (Import 1) not found.' };
   }
 
-  let items = [];
+  let cmsItems = [];
   try {
     const res = await wixData.query(collectionId)
       .descending('createdAt')
       .limit(500)
       .find({ suppressAuth: true });
-    items = res.items || [];
+    cmsItems = res.items || [];
   } catch (err) {
     const resFallback = await wixData.query(collectionId).limit(500).find({ suppressAuth: true });
-    items = resFallback.items || [];
+    cmsItems = resFallback.items || [];
   }
+
+  const [wixRes, opsList, drivers, vehicles] = await Promise.all([
+    queryAllWixBookings(100),
+    listRideOperations(200),
+    listDrivers(),
+    listVehicles()
+  ]);
+
+  const opsByRef = new Map();
+  const opsByWixId = new Map();
+  opsList.forEach((op) => {
+    if (op.bookingReference) opsByRef.set(op.bookingReference, op);
+    if (op.bookingId) opsByWixId.set(op.bookingId, op);
+  });
+
+  const merged = cmsItems.map((item) => {
+    const ref = getRecordRef(item);
+    const op = opsByWixId.get(item.wixBookingId) || opsByRef.get(ref) || {};
+    return {
+      ...item,
+      driverId: op.driverId || item.driverId || '',
+      vehicleId: op.vehicleId || item.vehicleId || '',
+      dispatchStatus: op.dispatchStatus || item.dispatchStatus || ''
+    };
+  });
+
+  // Include bookings created directly in Wix Dashboard that aren't in Import 1 yet
+  const knownWixIds = new Set(cmsItems.map((i) => i.wixBookingId).filter(Boolean));
+  (wixRes.items || []).forEach((wb) => {
+    if (wb.wixBookingId && !knownWixIds.has(wb.wixBookingId)) {
+      const op = opsByWixId.get(wb.wixBookingId) || {};
+      const st = wb.wixStatus === 'CONFIRMED'
+        ? 'Confirmed'
+        : (wb.wixStatus === 'DECLINED' ? 'Rejected' : (wb.wixStatus === 'CANCELED' ? 'Cancelled' : 'Pending'));
+      merged.push({
+        bookingId: wb.wixBookingId,
+        bookingReference: op.bookingReference || wb.wixBookingId,
+        wixBookingId: wb.wixBookingId,
+        wixRevision: wb.wixRevision,
+        wixStatus: wb.wixStatus,
+        bookingStatus: st,
+        status: st,
+        serviceTitle: wb.serviceTitle,
+        serviceType: wb.serviceTitle,
+        pickupDate: wb.pickupDate,
+        pickupTime: wb.pickupTime,
+        passengerFirstName: wb.passengerFirstName,
+        passengerLastName: wb.passengerLastName,
+        passengerName: wb.passengerName,
+        emailAddress: wb.emailAddress,
+        contactPhone: wb.contactPhone,
+        driverId: op.driverId || '',
+        vehicleId: op.vehicleId || '',
+        dispatchStatus: op.dispatchStatus || '',
+        createdAt: wb.createdAt,
+        updatedAt: wb.updatedAt,
+        source: 'wix_dashboard'
+      });
+    }
+  });
 
   const normalizedFilter = normalizeStatusTitle(statusFilter);
   const filtered = (statusFilter && statusFilter !== 'all' && normalizedFilter)
-    ? items.filter((item) => getRecordStatus(item) === normalizedFilter)
-    : items;
+    ? merged.filter((item) => getRecordStatus(item) === normalizedFilter)
+    : merged;
 
-  return { success: true, collectionId, items: filtered };
+  return {
+    success: true,
+    collectionId,
+    items: filtered,
+    drivers,
+    vehicles,
+    wixBookingsCount: (wixRes.items || []).length
+  };
 }
 
 /**
@@ -605,13 +708,13 @@ export async function searchAdminBookings(pin, searchQuery = '', statusFilter = 
 }
 
 /**
- * Admin Dashboard: update booking status ('Pending', 'Confirmed', 'Rejected', 'Completed', 'Cancelled')
- * and record rejection reason / ownerNotes in Live CMS.
+ * Admin Dashboard: update booking status ('Pending', 'Confirmed', 'Rejected', 'Completed', 'Cancelled'),
+ * synchronize with Wix Bookings V2, update RideOperations, log audit entry, and notify customer.
  */
-export async function updateBookingStatus(pin, bookingReference, nextStatus, ownerNotes = '') {
-  const ok = await verifyDispatchPin(pin);
-  if (!ok) {
-    return { success: false, message: 'Unauthorized: Invalid Administrator PIN.' };
+export async function updateBookingStatus(pinOrToken, bookingReference, nextStatus, ownerNotes = '') {
+  const adminUser = await verifyDispatchPin(pinOrToken, [ROLES.SUPER_ADMIN, ROLES.BOOKING_MANAGER, ROLES.DISPATCHER]);
+  if (!adminUser) {
+    return { success: false, message: 'Unauthorized: Insufficient permissions to update booking status.' };
   }
 
   const normalized = normalizeStatusTitle(nextStatus);
@@ -644,15 +747,44 @@ export async function updateBookingStatus(pin, bookingReference, nextStatus, own
     }
 
     const reasonText = String(ownerNotes || '').trim();
+    let wixRevision = current.wixRevision || '';
+    if (current.wixBookingId) {
+      if (normalized === 'Confirmed') {
+        const wr = await confirmWixBookingRecord(current.wixBookingId, wixRevision, reasonText);
+        if (wr.revision) wixRevision = wr.revision;
+      } else if (normalized === 'Rejected') {
+        const wr = await declineWixBookingRecord(current.wixBookingId, wixRevision, reasonText);
+        if (wr.revision) wixRevision = wr.revision;
+      } else if (normalized === 'Cancelled') {
+        const wr = await cancelWixBookingRecord(current.wixBookingId, wixRevision, reasonText);
+        if (wr.revision) wixRevision = wr.revision;
+      }
+    }
+
     const updated = {
       ...current,
       bookingStatus: normalized,
       status: normalized,
+      wixRevision,
       ownerNotes: reasonText || current.ownerNotes || '',
       rejectionReason: normalized === 'Rejected' ? (reasonText || current.rejectionReason || '') : (current.rejectionReason || ''),
       updatedAt: new Date().toISOString()
     };
     await wixData.update(collectionId, updated, { suppressAuth: true });
+
+    await upsertRideOperation({
+      bookingId: current.wixBookingId || getRecordRef(current),
+      bookingReference: getRecordRef(current),
+      dispatchStatus: normalized === 'Confirmed' ? 'Ready for Dispatch' : normalized,
+      adminNotes: reasonText || updated.ownerNotes
+    });
+
+    await recordAdminAudit(
+      adminUser.username,
+      `BOOKING_STATUS_${normalized.toUpperCase()}`,
+      getRecordRef(current),
+      reasonText || `Changed from ${currentStatus} to ${normalized}`
+    );
 
     const customerEmail = getRecordEmail(updated);
     const refOut = getRecordRef(updated);
@@ -691,9 +823,9 @@ export async function updateBookingStatus(pin, bookingReference, nextStatus, own
  * Admin Dashboard: edit booking trip/schedule/vehicle/notes in Live CMS.
  */
 export async function editBookingDetails(pin, bookingReference, updates = {}) {
-  const ok = await verifyDispatchPin(pin);
-  if (!ok) {
-    return { success: false, message: 'Unauthorized: Invalid Administrator PIN.' };
+  const adminUser = await verifyDispatchPin(pin, [ROLES.SUPER_ADMIN, ROLES.BOOKING_MANAGER, ROLES.DISPATCHER]);
+  if (!adminUser) {
+    return { success: false, message: 'Unauthorized: Insufficient permissions to edit bookings.' };
   }
 
   const collectionId = await resolveBookingsCollectionId();
@@ -732,8 +864,38 @@ export async function editBookingDetails(pin, bookingReference, updates = {}) {
     };
 
     await wixData.update(collectionId, updated, { suppressAuth: true });
+    await recordAdminAudit(adminUser.username, 'BOOKING_EDITED', ref, 'Updated trip/schedule details');
     return { success: true, booking: updated };
   } catch (err) {
     return { success: false, message: 'Unable to save booking edits in CMS.' };
   }
+}
+
+/**
+ * Admin Dashboard: assign driver & vehicle and update dispatch status in RideOperations + Import 1.
+ */
+export async function assignDriverAndVehicle(pinOrToken, bookingReference, driverId = '', vehicleId = '', dispatchStatus = 'Assigned', adminNotes = '') {
+  const adminUser = await verifyDispatchPin(pinOrToken, [ROLES.SUPER_ADMIN, ROLES.BOOKING_MANAGER, ROLES.DISPATCHER]);
+  if (!adminUser) {
+    return { success: false, message: 'Unauthorized: Insufficient permissions for dispatch assignment.' };
+  }
+
+  const ref = String(bookingReference || '').trim();
+  const opRes = await upsertRideOperation({
+    bookingId: ref,
+    bookingReference: ref,
+    driverId,
+    vehicleId,
+    dispatchStatus,
+    adminNotes
+  });
+
+  await recordAdminAudit(
+    adminUser.username,
+    'DISPATCH_ASSIGNED',
+    ref,
+    `Driver: ${driverId || 'Unassigned'}, Vehicle: ${vehicleId || 'Unassigned'}, Status: ${dispatchStatus}`
+  );
+
+  return { success: opRes.saved !== false, operation: opRes.item || null };
 }

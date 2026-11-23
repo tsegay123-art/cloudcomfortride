@@ -1,0 +1,216 @@
+import crypto from 'crypto';
+import wixData from 'wix-data';
+import { getSecret } from 'wix-secrets-backend';
+
+export const ROLES = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  BOOKING_MANAGER: 'BOOKING_MANAGER',
+  DISPATCHER: 'DISPATCHER',
+  CUSTOMER_SUPPORT: 'CUSTOMER_SUPPORT'
+};
+
+const ALL_ADMIN_ROLES = [
+  ROLES.SUPER_ADMIN,
+  ROLES.BOOKING_MANAGER,
+  ROLES.DISPATCHER,
+  ROLES.CUSTOMER_SUPPORT
+];
+
+const AUDIT_COLLECTION = 'AdminAuditLogs';
+let auditCollectionAvailable = null;
+
+// In-memory rate limit tracker per container
+const loginAttempts = new Map();
+
+async function getSessionSecret() {
+  try {
+    const s = await getSecret('CCR_SESSION_SECRET');
+    if (s) return String(s);
+  } catch (e) {
+    // Fallback derived from dispatch PIN if dedicated secret not yet added
+  }
+  try {
+    const pin = await getSecret('CCR_DISPATCH_PIN');
+    return `ccr-session-${pin || '2023'}`;
+  } catch (e) {
+    return 'ccr-session-2023-fallback';
+  }
+}
+
+async function getConfiguredAdminUsers() {
+  try {
+    const raw = await getSecret('CCR_ADMIN_USERS_JSON');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    // Fallback to single CCR_DISPATCH_PIN Super Admin
+  }
+
+  let pin = '2023';
+  try {
+    const secretPin = await getSecret('CCR_DISPATCH_PIN');
+    if (secretPin) pin = String(secretPin).trim();
+  } catch (e) {
+    // Default PIN when Secrets Manager has 0 secrets configured
+  }
+
+  return [
+    {
+      username: 'admin',
+      name: 'Cloud Comfort Ride Admin',
+      pin,
+      role: ROLES.SUPER_ADMIN
+    }
+  ];
+}
+
+function signToken(payloadObj, secret) {
+  const data = Buffer.from(JSON.stringify(payloadObj)).toString('base64url');
+  const sig = crypto.createHmac('sha256', secret).update(data).digest('base64url');
+  return `${data}.${sig}`;
+}
+
+function verifyTokenSignature(token, secret) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 2) return null;
+  const [data, sig] = parts;
+  const expected = crypto.createHmac('sha256', secret).update(data).digest('base64url');
+  if (sig.length !== expected.length) return null;
+  if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(data, 'base64url').toString('utf8'));
+    if (!payload || !payload.exp || Date.now() > payload.exp) return null;
+    return payload;
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function recordAdminAudit(actor, action, targetId, details = '') {
+  if (auditCollectionAvailable === false) return;
+  try {
+    await wixData.insert(AUDIT_COLLECTION, {
+      actor: String(actor || 'system'),
+      action: String(action || ''),
+      targetId: String(targetId || ''),
+      details: String(details || ''),
+      createdAt: new Date().toISOString()
+    }, { suppressAuth: true });
+    auditCollectionAvailable = true;
+  } catch (e) {
+    auditCollectionAvailable = false;
+  }
+}
+
+export async function listAuditLogs(authToken, limit = 100) {
+  const auth = await verifyAdminAccess(authToken, [ROLES.SUPER_ADMIN, ROLES.BOOKING_MANAGER]);
+  if (!auth.authorized) {
+    return { success: false, message: auth.message, items: [] };
+  }
+  if (auditCollectionAvailable === false) {
+    return { success: true, items: [] };
+  }
+  try {
+    const res = await wixData.query(AUDIT_COLLECTION)
+      .descending('createdAt')
+      .limit(Math.min(limit, 200))
+      .find({ suppressAuth: true });
+    auditCollectionAvailable = true;
+    return { success: true, items: res.items || [] };
+  } catch (e) {
+    auditCollectionAvailable = false;
+    return { success: true, items: [] };
+  }
+}
+
+export async function adminLogin(pinOrPassword, username = 'admin') {
+  const key = String(username || 'admin').toLowerCase();
+  const now = Date.now();
+  const entry = loginAttempts.get(key) || { count: 0, resetAt: now + 15 * 60 * 1000 };
+  if (now > entry.resetAt) {
+    entry.count = 0;
+    entry.resetAt = now + 15 * 60 * 1000;
+  }
+  if (entry.count >= 10) {
+    return {
+      success: false,
+      message: 'Too many login attempts. Please wait 15 minutes before trying again.'
+    };
+  }
+
+  const users = await getConfiguredAdminUsers();
+  const inputCred = String(pinOrPassword || '').trim();
+  const matched = users.find((u) => {
+    const userMatch = !username || username === 'admin' || String(u.username || '').toLowerCase() === key;
+    return userMatch && String(u.pin || '').trim() === inputCred;
+  });
+
+  if (!matched) {
+    entry.count += 1;
+    loginAttempts.set(key, entry);
+    await recordAdminAudit(key, 'ADMIN_LOGIN_FAILED', 'auth', 'Invalid credentials');
+    return { success: false, message: 'Invalid Administrator PIN or credentials.' };
+  }
+
+  loginAttempts.delete(key);
+  const secret = await getSessionSecret();
+  const sessionPayload = {
+    username: matched.username || 'admin',
+    name: matched.name || 'Administrator',
+    role: matched.role || ROLES.SUPER_ADMIN,
+    iat: now,
+    exp: now + 8 * 60 * 60 * 1000 // 8-hour session
+  };
+  const token = signToken(sessionPayload, secret);
+  await recordAdminAudit(sessionPayload.username, 'ADMIN_LOGIN_SUCCESS', 'auth', `Role: ${sessionPayload.role}`);
+
+  return {
+    success: true,
+    token,
+    user: {
+      username: sessionPayload.username,
+      name: sessionPayload.name,
+      role: sessionPayload.role
+    }
+  };
+}
+
+/**
+ * Verifies either a signed session token OR a valid admin PIN directly,
+ * and enforces Role-Based Access Control (RBAC).
+ */
+export async function verifyAdminAccess(tokenOrPin, allowedRoles = ALL_ADMIN_ROLES) {
+  const raw = String(tokenOrPin || '').trim();
+  if (!raw) {
+    return { authorized: false, message: 'Unauthorized: Administrator authentication required.' };
+  }
+
+  const secret = await getSessionSecret();
+  if (raw.includes('.')) {
+    const payload = verifyTokenSignature(raw, secret);
+    if (!payload) {
+      return { authorized: false, message: 'Session expired or invalid. Please sign in again.' };
+    }
+    if (allowedRoles.length && !allowedRoles.includes(payload.role)) {
+      return { authorized: false, message: `Forbidden: Role '${payload.role}' lacks permission for this action.` };
+    }
+    return { authorized: true, user: payload };
+  }
+
+  // Direct PIN fallback for backward compatibility with existing dispatch calls
+  const users = await getConfiguredAdminUsers();
+  const matched = users.find((u) => String(u.pin || '').trim() === raw);
+  if (!matched) {
+    return { authorized: false, message: 'Unauthorized: Invalid Administrator PIN.' };
+  }
+  const role = matched.role || ROLES.SUPER_ADMIN;
+  if (allowedRoles.length && !allowedRoles.includes(role)) {
+    return { authorized: false, message: `Forbidden: Role '${role}' lacks permission for this action.` };
+  }
+  return {
+    authorized: true,
+    user: { username: matched.username || 'admin', name: matched.name || 'Administrator', role }
+  };
+}

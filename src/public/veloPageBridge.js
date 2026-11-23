@@ -9,8 +9,12 @@ import {
   listAllBookings,
   searchAdminBookings,
   updateBookingStatus,
-  editBookingDetails
+  editBookingDetails,
+  assignDriverAndVehicle,
+  getWixBookingCatalog,
+  getWixAvailability
 } from 'backend/bookingService.jsw';
+import { adminLogin, listAuditLogs } from 'backend/authService.jsw';
 import { submitInquiry, listAllInquiries, resolveInquiry } from 'backend/contactService.jsw';
 import { COMPANY_INFO } from './companyData';
 
@@ -33,8 +37,16 @@ const ROUTE_ALIASES = {
   '/privacy': { urls: ['/privacy', '/privacy-policy'], names: ['privacy policy', 'privacy'] },
   '/terms': { urls: ['/terms', '/terms-of-service'], names: ['terms of service', 'terms'] },
   '/accessibility': { urls: ['/accessibility', '/accessibility-statement'], names: ['accessibility statement', 'accessibility'] },
-  '/owner-dispatch': { urls: ['/admin/bookings', '/admin-bookings', '/owner-dispatch', '/dispatch'], names: ['admin bookings', 'owner dispatch', 'dispatch'] },
-  '/admin/bookings': { urls: ['/admin/bookings', '/admin-bookings', '/owner-dispatch', '/dispatch'], names: ['admin bookings', 'owner dispatch', 'dispatch'] }
+  '/owner-dispatch': { urls: ['/admin/bookings', '/admin', '/admin-bookings', '/owner-dispatch', '/dispatch'], names: ['admin bookings', 'admin', 'owner dispatch', 'dispatch'] },
+  '/admin': { urls: ['/admin', '/admin/bookings', '/admin-bookings', '/owner-dispatch'], names: ['admin', 'admin bookings', 'owner dispatch'] },
+  '/admin/login': { urls: ['/admin/login', '/admin/bookings', '/admin', '/owner-dispatch'], names: ['admin login', 'admin bookings', 'admin'] },
+  '/admin/bookings': { urls: ['/admin/bookings', '/admin', '/admin-bookings', '/owner-dispatch', '/dispatch'], names: ['admin bookings', 'owner dispatch', 'dispatch'] },
+  '/admin/customers': { urls: ['/admin/customers', '/admin/bookings', '/admin', '/owner-dispatch'], names: ['admin customers', 'admin bookings', 'admin'] },
+  '/admin/dispatch': { urls: ['/admin/dispatch', '/admin/bookings', '/admin', '/owner-dispatch'], names: ['admin dispatch', 'admin bookings', 'owner dispatch'] },
+  '/admin/drivers': { urls: ['/admin/drivers', '/admin/bookings', '/admin', '/owner-dispatch'], names: ['admin drivers', 'admin bookings', 'admin'] },
+  '/admin/vehicles': { urls: ['/admin/vehicles', '/admin/bookings', '/admin', '/owner-dispatch'], names: ['admin vehicles', 'admin bookings', 'admin'] },
+  '/admin/reports': { urls: ['/admin/reports', '/admin/bookings', '/admin', '/owner-dispatch'], names: ['admin reports', 'admin bookings', 'admin'] },
+  '/admin/settings': { urls: ['/admin/settings', '/admin/bookings', '/admin', '/owner-dispatch'], names: ['admin settings', 'admin bookings', 'admin'] }
 };
 
 function resolveWixRoute(requestedPath) {
@@ -391,6 +403,24 @@ export function wireBookingElement(selector) {
 
   targets.forEach((el) => {
     if (!markWired(el, 'submitBooking')) return;
+    getWixBookingCatalog()
+      .then((cat) => {
+        if (cat && cat.success && Array.isArray(cat.items)) {
+          el.setAttribute('wix-services', JSON.stringify(cat.items));
+        }
+      })
+      .catch(() => {});
+
+    el.on('checkAvailability', async (event) => {
+      const detail = (event && event.detail) || {};
+      try {
+        const res = await getWixAvailability(detail.serviceId, detail.pickupDate);
+        el.setAttribute('wix-availability', JSON.stringify(res || { success: false, slots: [] }));
+      } catch (err) {
+        el.setAttribute('wix-availability', JSON.stringify({ success: false, slots: [] }));
+      }
+    });
+
     el.on('submitBooking', async (event) => {
       const detail = (event && event.detail) || {};
       try {
@@ -463,37 +493,66 @@ export function wireDispatchElement(selector) {
   const targets = resolveAllPageCustomElements(selector);
   if (!targets.length) return;
 
+  let currentPath = '/';
+  try {
+    const pathArr = wixLocationFrontend.path || [];
+    currentPath = `/${Array.isArray(pathArr) ? pathArr.join('/') : String(pathArr)}`;
+  } catch (e) {
+    currentPath = '/admin/bookings';
+  }
+
   targets.forEach((el) => {
+    if (typeof el.setAttribute === 'function') {
+      el.setAttribute('admin-route', currentPath);
+    }
     if (!markWired(el, 'dispatch')) return;
+
+    const reloadDispatchPayload = async (tokenOrPin, extraUser = null) => {
+      const [bRes, iRes, aRes] = await Promise.all([
+        listAllBookings(tokenOrPin),
+        listAllInquiries(tokenOrPin),
+        listAuditLogs(tokenOrPin)
+      ]);
+      if (bRes && bRes.success) {
+        el.setAttribute('dispatch-error', '');
+        el.setAttribute('dispatch-data', JSON.stringify({
+          token: tokenOrPin,
+          user: extraUser,
+          bookings: bRes.items || [],
+          inquiries: (iRes && iRes.items) || [],
+          drivers: bRes.drivers || [],
+          vehicles: bRes.vehicles || [],
+          auditLogs: (aRes && aRes.items) || [],
+          wixBookingsCount: bRes.wixBookingsCount || 0
+        }));
+        return true;
+      }
+      el.setAttribute('dispatch-error', (bRes && bRes.message) || 'Invalid Administrator credentials.');
+      return false;
+    };
+
     el.on('dispatchLogin', async (event) => {
       const detail = (event && event.detail) || {};
       const pin = detail.pin || '';
+      const username = detail.username || 'admin';
       try {
-        const [bRes, iRes] = await Promise.all([listAllBookings(pin), listAllInquiries(pin)]);
-        if (bRes && bRes.success) {
-          el.setAttribute('dispatch-error', '');
-          el.setAttribute('dispatch-data', JSON.stringify({
-            bookings: bRes.items || [],
-            inquiries: (iRes && iRes.items) || []
-          }));
-        } else {
-          el.setAttribute('dispatch-error', (bRes && bRes.message) || 'Invalid Dispatch PIN.');
+        const loginRes = await adminLogin(pin, username);
+        if (!loginRes || !loginRes.success) {
+          el.setAttribute('dispatch-error', (loginRes && loginRes.message) || 'Invalid Administrator credentials.');
+          return;
         }
+        await reloadDispatchPayload(loginRes.token || pin, loginRes.user || null);
       } catch (err) {
-        el.setAttribute('dispatch-error', 'Unable to load dispatch data.');
+        el.setAttribute('dispatch-error', 'Unable to load admin dashboard data.');
       }
     });
 
     el.on('updateBookingStatus', async (event) => {
       const detail = (event && event.detail) || {};
       try {
-        const res = await updateBookingStatus(detail.pin, detail.bookingId, detail.status, detail.ownerNotes || '');
+        const res = await updateBookingStatus(detail.token || detail.pin, detail.bookingId, detail.status, detail.ownerNotes || '');
         if (res && res.success) {
-          const [bRes, iRes] = await Promise.all([listAllBookings(detail.pin), listAllInquiries(detail.pin)]);
-          el.setAttribute('dispatch-data', JSON.stringify({
-            bookings: (bRes && bRes.items) || [],
-            inquiries: (iRes && iRes.items) || []
-          }));
+          await reloadDispatchPayload(detail.token || detail.pin);
         } else {
           el.setAttribute('dispatch-error', (res && res.message) || 'Failed to update booking.');
         }
@@ -505,7 +564,7 @@ export function wireDispatchElement(selector) {
     el.on('searchBookings', async (event) => {
       const detail = (event && event.detail) || {};
       try {
-        const res = await searchAdminBookings(detail.pin || '', detail.query || '', detail.statusFilter || 'all');
+        const res = await searchAdminBookings(detail.token || detail.pin || '', detail.query || '', detail.statusFilter || 'all');
         if (res && res.success) {
           el.setAttribute('dispatch-error', res.message || '');
           el.setAttribute('dispatch-search-results', JSON.stringify(res.items || []));
@@ -520,14 +579,9 @@ export function wireDispatchElement(selector) {
     el.on('editBooking', async (event) => {
       const detail = (event && event.detail) || {};
       try {
-        const res = await editBookingDetails(detail.pin || '', detail.bookingId, detail.updates || {});
+        const res = await editBookingDetails(detail.token || detail.pin || '', detail.bookingId, detail.updates || {});
         if (res && res.success) {
-          const [bRes, iRes] = await Promise.all([listAllBookings(detail.pin), listAllInquiries(detail.pin)]);
-          el.setAttribute('dispatch-error', '');
-          el.setAttribute('dispatch-data', JSON.stringify({
-            bookings: (bRes && bRes.items) || [],
-            inquiries: (iRes && iRes.items) || []
-          }));
+          await reloadDispatchPayload(detail.token || detail.pin);
         } else {
           el.setAttribute('dispatch-error', (res && res.message) || 'Failed to update booking details.');
         }
@@ -536,16 +590,33 @@ export function wireDispatchElement(selector) {
       }
     });
 
+    el.on('assignDispatch', async (event) => {
+      const detail = (event && event.detail) || {};
+      try {
+        const res = await assignDriverAndVehicle(
+          detail.token || detail.pin || '',
+          detail.bookingId,
+          detail.driverId || '',
+          detail.vehicleId || '',
+          detail.dispatchStatus || 'Assigned',
+          detail.adminNotes || ''
+        );
+        if (res && res.success) {
+          await reloadDispatchPayload(detail.token || detail.pin);
+        } else {
+          el.setAttribute('dispatch-error', (res && res.message) || 'Failed to assign driver/vehicle.');
+        }
+      } catch (err) {
+        el.setAttribute('dispatch-error', 'Failed to assign driver/vehicle.');
+      }
+    });
+
     el.on('resolveInquiry', async (event) => {
       const detail = (event && event.detail) || {};
       try {
-        const res = await resolveInquiry(detail.pin, detail.inquiryId);
+        const res = await resolveInquiry(detail.token || detail.pin, detail.inquiryId);
         if (res && res.success) {
-          const [bRes, iRes] = await Promise.all([listAllBookings(detail.pin), listAllInquiries(detail.pin)]);
-          el.setAttribute('dispatch-data', JSON.stringify({
-            bookings: (bRes && bRes.items) || [],
-            inquiries: (iRes && iRes.items) || []
-          }));
+          await reloadDispatchPayload(detail.token || detail.pin);
         }
       } catch (err) {
         el.setAttribute('dispatch-error', 'Failed to resolve inquiry.');

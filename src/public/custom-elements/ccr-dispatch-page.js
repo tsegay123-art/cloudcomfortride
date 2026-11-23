@@ -5,13 +5,15 @@ import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrDispatchPage extends HTMLElement {
     static get observedAttributes() {
-      return ['dispatch-data', 'dispatch-error', 'dispatch-search-results'];
+      return ['dispatch-data', 'dispatch-error', 'dispatch-search-results', 'admin-route'];
     }
 
     constructor() {
       super();
       this.attachShadow({ mode: 'open' });
       this._pin = '';
+      this._token = '';
+      this._user = null;
       this._authenticated = false;
       this._loading = false;
       this._error = '';
@@ -22,6 +24,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       this._serviceFilter = '';
       this._bookings = [];
       this._inquiries = [];
+      this._drivers = [];
+      this._vehicles = [];
+      this._auditLogs = [];
+      this._wixBookingsCount = 0;
       this._detailBooking = null;
       this._editBooking = null;
       this._rejectBooking = null;
@@ -40,11 +46,27 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
     }
 
     attributeChangedCallback(name, _oldVal, newVal) {
-      if (name === 'dispatch-data' && newVal) {
+      if (name === 'admin-route' && newVal) {
+        const route = String(newVal).toLowerCase();
+        if (route.includes('/customers')) this._tab = 'customers';
+        else if (route.includes('/dispatch')) this._tab = 'dispatch';
+        else if (route.includes('/drivers')) this._tab = 'drivers';
+        else if (route.includes('/vehicles')) this._tab = 'vehicles';
+        else if (route.includes('/reports')) this._tab = 'reports';
+        else if (route.includes('/settings')) this._tab = 'settings';
+        else this._tab = 'bookings';
+        this.render();
+      } else if (name === 'dispatch-data' && newVal) {
         try {
           const data = JSON.parse(newVal);
+          if (data.token) this._token = data.token;
+          if (data.user) this._user = data.user;
           this._bookings = Array.isArray(data.bookings) ? data.bookings : [];
           this._inquiries = Array.isArray(data.inquiries) ? data.inquiries : [];
+          this._drivers = Array.isArray(data.drivers) ? data.drivers : [];
+          this._vehicles = Array.isArray(data.vehicles) ? data.vehicles : [];
+          this._auditLogs = Array.isArray(data.auditLogs) ? data.auditLogs : [];
+          this._wixBookingsCount = Number(data.wixBookingsCount || 0);
           this._authenticated = true;
           this._loading = false;
           this._error = '';
@@ -86,7 +108,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       this._loading = true;
       this.render();
       this.dispatchEvent(new CustomEvent('updateBookingStatus', {
-        detail: { pin: this._pin, bookingId, status, ownerNotes },
+        detail: { pin: this._pin, token: this._token || this._pin, bookingId, status, ownerNotes },
         bubbles: true,
         composed: true
       }));
@@ -96,7 +118,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       this._loading = true;
       this.render();
       this.dispatchEvent(new CustomEvent('resolveInquiry', {
-        detail: { pin: this._pin, inquiryId },
+        detail: { pin: this._pin, token: this._token || this._pin, inquiryId },
         bubbles: true,
         composed: true
       }));
@@ -279,15 +301,24 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             ` : `
               <div class="tab-row">
                 <div class="tab-btns">
-                  <button class="tab-btn ${this._tab === 'bookings' ? 'active' : ''}" id="tab-bookings">
-                    Ride Bookings (${this._bookings.length}) • Pending: ${pendingCount} • Confirmed: ${confirmedCount}
-                  </button>
-                  <button class="tab-btn ${this._tab === 'inquiries' ? 'active' : ''}" id="tab-inquiries">
-                    Contact Messages (${this._inquiries.length})
-                  </button>
+                  ${[
+                    { id: 'bookings', label: `Bookings (${this._bookings.length})` },
+                    { id: 'dispatch', label: 'Dispatch' },
+                    { id: 'customers', label: 'Customers' },
+                    { id: 'drivers', label: `Drivers (${this._drivers.length})` },
+                    { id: 'vehicles', label: `Vehicles (${this._vehicles.length})` },
+                    { id: 'reports', label: 'Reports & Audit' },
+                    { id: 'inquiries', label: `Messages (${this._inquiries.length})` },
+                    { id: 'settings', label: 'Settings' }
+                  ].map((t) => `
+                    <button class="tab-btn ${this._tab === t.id ? 'active' : ''}" data-admin-tab="${t.id}" style="padding:10px 14px;min-height:44px;font-size:14px;">
+                      ${t.label}
+                    </button>
+                  `).join('')}
                 </div>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                  ${this._tab === 'bookings' ? `<button class="dt-button-outline" id="export-csv-btn" ${filteredBookings.length === 0 ? 'disabled' : ''}>⬇ Export CSV</button>` : ''}
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                  ${this._user ? `<span class="badge resolved">${escapeHtml(this._user.role || 'SUPER_ADMIN')}</span>` : ''}
+                  ${this._tab === 'bookings' || this._tab === 'reports' ? `<button class="dt-button-outline" id="export-csv-btn" ${filteredBookings.length === 0 ? 'disabled' : ''}>⬇ Export CSV</button>` : ''}
                   <button class="dt-button-outline" id="refresh-dispatch" ${this._loading ? 'disabled' : ''}>↻ Refresh</button>
                 </div>
               </div>
@@ -381,6 +412,75 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                     </div>
                   `;
                 }).join('')}
+              ` : this._tab === 'dispatch' ? `
+                <h2 style="font-size:22px;font-weight:800;margin-bottom:14px;">Dispatch &amp; Driver/Vehicle Assignment (RideOperations)</h2>
+                ${this._bookings.filter((b) => normStatus(b) === 'Confirmed' || normStatus(b) === 'Pending').map((b) => {
+                  const bid = escapeHtml(getRef(b));
+                  return `
+                    <div class="item-card">
+                      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;margin-bottom:10px;">
+                        <strong>${bid} — ${escapeHtml(getName(b))} (${escapeHtml(b.pickupDate)} ${escapeHtml(b.pickupTime)})</strong>
+                        <span class="badge ${normStatus(b) === 'Confirmed' ? 'confirmed' : 'pending_review'}">${escapeHtml(b.dispatchStatus || normStatus(b))}</span>
+                      </div>
+                      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;align-items:end;">
+                        <div><label style="font-size:12px;font-weight:700;">Driver ID / Name</label><input type="text" data-driver-for="${bid}" value="${escapeHtml(b.driverId || '')}" placeholder="Assign driver..." style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--card-border);" /></div>
+                        <div><label style="font-size:12px;font-weight:700;">Vehicle ID / Unit</label><input type="text" data-vehicle-for="${bid}" value="${escapeHtml(b.vehicleId || b.vehicleOption || '')}" placeholder="Assign vehicle..." style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--card-border);" /></div>
+                        <div><label style="font-size:12px;font-weight:700;">Dispatch Status</label>
+                          <select data-dstatus-for="${bid}" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--card-border);">
+                            ${['Unassigned', 'Assigned', 'En Route', 'On Scene', 'Completed'].map((ds) => `<option value="${ds}" ${(b.dispatchStatus || '') === ds ? 'selected' : ''}>${ds}</option>`).join('')}
+                          </select>
+                        </div>
+                        <button class="dt-button" data-assign="${bid}" style="min-height:42px;">Save Assignment</button>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              ` : this._tab === 'customers' ? `
+                <h2 style="font-size:22px;font-weight:800;margin-bottom:14px;">Customer Directory</h2>
+                ${Array.from(new Map(this._bookings.map((b) => [getEmail(b) || getPhone(b) || getRef(b), b])).values()).map((c) => `
+                  <div class="item-card">
+                    <div class="meta-grid">
+                      <div><span>Customer</span><strong>${escapeHtml(getName(c))}</strong></div>
+                      <div><span>Email</span><strong>${escapeHtml(getEmail(c))}</strong></div>
+                      <div><span>Phone</span><strong>${escapeHtml(getPhone(c))}</strong></div>
+                      <div><span>Latest Booking</span><strong>${escapeHtml(getRef(c))} (${escapeHtml(normStatus(c))})</strong></div>
+                    </div>
+                  </div>
+                `).join('')}
+              ` : this._tab === 'drivers' ? `
+                <h2 style="font-size:22px;font-weight:800;margin-bottom:14px;">Drivers (${this._drivers.length})</h2>
+                ${this._drivers.length === 0 ? `<div class="card" style="padding:28px;"><p>No records in <code>Drivers</code> CMS collection yet. Add drivers in Wix CMS or assign Driver IDs directly in the Dispatch tab.</p></div>` : this._drivers.map((d) => `<div class="item-card"><strong>${escapeHtml(d.name || d.title || d._id)}</strong> — ${escapeHtml(d.phone || d.status || '')}</div>`).join('')}
+              ` : this._tab === 'vehicles' ? `
+                <h2 style="font-size:22px;font-weight:800;margin-bottom:14px;">Fleet Vehicles (${this._vehicles.length})</h2>
+                ${this._vehicles.length === 0 ? `<div class="card" style="padding:28px;"><p>No records in <code>Vehicles</code> CMS collection yet. Add vehicles in Wix CMS or assign Vehicle IDs directly in the Dispatch tab.</p></div>` : this._vehicles.map((v) => `<div class="item-card"><strong>${escapeHtml(v.name || v.title || v._id)}</strong> — ${escapeHtml(v.type || v.status || '')}</div>`).join('')}
+              ` : this._tab === 'reports' ? `
+                <h2 style="font-size:22px;font-weight:800;margin-bottom:14px;">Reports &amp; Audit History</h2>
+                <div class="item-card">
+                  <div class="meta-grid">
+                    <div><span>Total Bookings</span><strong>${this._bookings.length}</strong></div>
+                    <div><span>Pending</span><strong>${pendingCount}</strong></div>
+                    <div><span>Confirmed</span><strong>${confirmedCount}</strong></div>
+                    <div><span>Wix Bookings Synced</span><strong>${this._wixBookingsCount}</strong></div>
+                  </div>
+                </div>
+                <h3 style="font-size:18px;font-weight:800;margin:18px 0 10px;">Recent Admin Audit Logs (${this._auditLogs.length})</h3>
+                ${this._auditLogs.length === 0 ? `<div class="card" style="padding:24px;"><p>No audit log records yet (provision <code>AdminAuditLogs</code> in Wix CMS to persist audit history).</p></div>` : this._auditLogs.slice(0, 30).map((log) => `
+                  <div class="item-card" style="padding:14px;">
+                    <strong>${escapeHtml(log.action)}</strong> — Target: <code>${escapeHtml(log.targetId)}</code> • By: ${escapeHtml(log.actor)} • ${escapeHtml(log.createdAt)}
+                    ${log.details ? `<div style="font-size:14px;color:var(--muted);margin-top:4px;">${escapeHtml(log.details)}</div>` : ''}
+                  </div>
+                `).join('')}
+              ` : this._tab === 'settings' ? `
+                <h2 style="font-size:22px;font-weight:800;margin-bottom:14px;">Admin &amp; Wix Bookings Integration Settings</h2>
+                <div class="item-card">
+                  <div class="meta-grid">
+                    <div><span>Signed-In User</span><strong>${escapeHtml((this._user && this._user.name) || 'Administrator')}</strong></div>
+                    <div><span>RBAC Role</span><strong>${escapeHtml((this._user && this._user.role) || 'SUPER_ADMIN')}</strong></div>
+                    <div><span>Wix Bookings Loaded</span><strong>${this._wixBookingsCount}</strong></div>
+                    <div><span>Import 1 Records</span><strong>${this._bookings.length}</strong></div>
+                  </div>
+                  <p style="font-size:14px;line-height:1.6;">Configure <code>CCR_DISPATCH_PIN</code>, <code>CCR_SESSION_SECRET</code>, <code>CCR_ADMIN_USERS_JSON</code>, and email secrets in Wix Dashboard → Developer Tools → Secrets Manager.</p>
+                </div>
               ` : `
                 ${this._inquiries.length === 0 ? `
                   <div class="card" style="padding:40px;text-align:center;">
@@ -490,14 +590,39 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         });
       }
 
-      const tabB = this.shadowRoot.getElementById('tab-bookings');
-      const tabI = this.shadowRoot.getElementById('tab-inquiries');
       const refBtn = this.shadowRoot.getElementById('refresh-dispatch');
       const exportBtn = this.shadowRoot.getElementById('export-csv-btn');
-      if (tabB) tabB.addEventListener('click', () => { this._tab = 'bookings'; this.render(); });
-      if (tabI) tabI.addEventListener('click', () => { this._tab = 'inquiries'; this.render(); });
+      this.shadowRoot.querySelectorAll('[data-admin-tab]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          this._tab = btn.getAttribute('data-admin-tab') || 'bookings';
+          this.render();
+        });
+      });
       if (refBtn) refBtn.addEventListener('click', () => this._login(this._pin));
       if (exportBtn) exportBtn.addEventListener('click', () => this._exportBookingsCsv(filteredBookings));
+
+      this.shadowRoot.querySelectorAll('[data-assign]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-assign');
+          const dEl = /** @type {HTMLInputElement | null} */ (this.shadowRoot.querySelector(`[data-driver-for="${id}"]`));
+          const vEl = /** @type {HTMLInputElement | null} */ (this.shadowRoot.querySelector(`[data-vehicle-for="${id}"]`));
+          const sEl = /** @type {HTMLSelectElement | null} */ (this.shadowRoot.querySelector(`[data-dstatus-for="${id}"]`));
+          this._loading = true;
+          this.render();
+          this.dispatchEvent(new CustomEvent('assignDispatch', {
+            detail: {
+              pin: this._pin,
+              token: this._token || this._pin,
+              bookingId: id,
+              driverId: dEl ? dEl.value : '',
+              vehicleId: vEl ? vEl.value : '',
+              dispatchStatus: sEl ? sEl.value : 'Assigned'
+            },
+            bubbles: true,
+            composed: true
+          }));
+        });
+      });
 
       const dSearch = /** @type {HTMLInputElement | null} */ (this.shadowRoot.getElementById('d-search'));
       const dDate = /** @type {HTMLInputElement | null} */ (this.shadowRoot.getElementById('d-date'));
@@ -580,6 +705,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           this.dispatchEvent(new CustomEvent('editBooking', {
             detail: {
               pin: this._pin,
+              token: this._token || this._pin,
               bookingId: id,
               updates: {
                 pickupDate: val('ed-date'),
