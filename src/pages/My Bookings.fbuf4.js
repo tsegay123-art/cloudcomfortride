@@ -1,7 +1,6 @@
-import wixLocationFrontend from 'wix-location-frontend';
-import { resolveWixRoute } from 'public/veloPageBridge';
+// API Reference: https://www.wix.com/velo/reference/api-overview/introduction
+// “Hello, World!” Example: https://learn-code.wix.com/en/article/hello-world
 
 $w.onReady(function () {
-  const target = resolveWixRoute('/my-booking');
-  wixLocationFrontend.to(target);
+    // Official Wix Members Area My Bookings page
 });

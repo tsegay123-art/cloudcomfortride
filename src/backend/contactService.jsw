@@ -1,4 +1,5 @@
 import wixData from 'wix-data';
+import { contacts } from 'wix-crm.v2';
 import { OWNER_EMAIL, sendWixOrResendNotification } from './notificationService';
 import { verifyAdminAccess } from './authService.jsw';
 
@@ -111,16 +112,33 @@ export async function submitInquiry(payload) {
     notificationStatus: 'PENDING'
   };
 
+  let crmContactId = '';
+  try {
+    if (contacts && contacts.createContact) {
+      const created = await contacts.createContact({
+        name: { first: firstName, last: lastName === '-' ? '' : lastName },
+        emails: { items: [{ email }] },
+        phones: phone ? { items: [{ phone }] } : undefined,
+        company: subject
+      });
+      crmContactId = (created && created.contact && created.contact._id) || '';
+    }
+  } catch (e) {
+    // Non-fatal if contact already exists or CRM API unavailable in preview
+  }
+
   let insertedItem = null;
   try {
-    insertedItem = await wixData.insert(collectionId, record, { suppressAuth: true });
+    insertedItem = await wixData.insert(collectionId, { ...record, crmContactId }, { suppressAuth: true });
   } catch (err) {
     console.error(`${collectionId} CMS insert failed:`, err && err.message ? err.message : err);
-    return {
-      success: false,
-      persistedToCms: false,
-      message: 'Unable to save your message to the dispatch database. Please call (206) 327-4411.'
-    };
+    if (!crmContactId) {
+      return {
+        success: false,
+        persistedToCms: false,
+        message: 'Unable to save your message. Please call (206) 327-4411.'
+      };
+    }
   }
 
   const vars = {

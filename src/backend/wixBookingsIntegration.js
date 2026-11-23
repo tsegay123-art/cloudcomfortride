@@ -1,25 +1,12 @@
 import { services, availabilityCalendar, bookings, extendedBookings } from 'wix-bookings.v2';
 
-let cachedElevate = null;
-async function getElevate() {
-  if (cachedElevate !== null) return cachedElevate;
-  try {
-    const mod = await import('wix-auth');
-    cachedElevate = (mod && typeof mod.elevate === 'function') ? mod.elevate : false;
-  } catch (e) {
-    cachedElevate = false;
-  }
-  return cachedElevate;
-}
-
 async function callElevated(fn, ...args) {
-  const elevateFn = await getElevate();
-  const target = elevateFn ? elevateFn(fn) : fn;
-  return target(...args);
+  return fn(...args);
 }
 
 /**
  * Retrieve real services configured in Wix Bookings.
+ * @returns {Promise<Record<string, any>>}
  */
 export async function listWixServices() {
   try {
@@ -49,6 +36,10 @@ export async function listWixServices() {
 
 /**
  * Query real Wix Bookings availability slots for a given serviceId and YYYY-MM-DD date.
+ * @param {string} serviceId
+ * @param {string} pickupDate
+ * @param {string} [timezone]
+ * @returns {Promise<Record<string, any>>}
  */
 export async function queryWixServiceAvailability(serviceId, pickupDate, timezone = 'America/Los_Angeles') {
   if (!serviceId || !pickupDate) {
@@ -145,6 +136,9 @@ function pickBestSlot(slots, pickupTime) {
 
 /**
  * Create a real booking in Wix Bookings V2 so it appears in Wix Dashboard Calendar & Booking Requests.
+ * @param {Record<string, any>} payload
+ * @param {string} bookingReference
+ * @returns {Promise<Record<string, any>>}
  */
 export async function createWixBookingRecord(payload, bookingReference) {
   const svcRes = await listWixServices();
@@ -253,6 +247,12 @@ export async function createWixBookingRecord(payload, bookingReference) {
   }
 }
 
+/**
+ * @param {string} wixBookingId
+ * @param {string} [revision]
+ * @param {string} [message]
+ * @returns {Promise<Record<string, any>>}
+ */
 export async function confirmWixBookingRecord(wixBookingId, revision, message = '') {
   if (!wixBookingId) return { updatedInWix: false, reason: 'NO_WIX_BOOKING_ID' };
   try {
@@ -269,6 +269,12 @@ export async function confirmWixBookingRecord(wixBookingId, revision, message = 
   }
 }
 
+/**
+ * @param {string} wixBookingId
+ * @param {string} [revision]
+ * @param {string} [message]
+ * @returns {Promise<Record<string, any>>}
+ */
 export async function declineWixBookingRecord(wixBookingId, revision, message = '') {
   if (!wixBookingId) return { updatedInWix: false, reason: 'NO_WIX_BOOKING_ID' };
   try {
@@ -285,6 +291,12 @@ export async function declineWixBookingRecord(wixBookingId, revision, message = 
   }
 }
 
+/**
+ * @param {string} wixBookingId
+ * @param {string} [revision]
+ * @param {string} [message]
+ * @returns {Promise<Record<string, any>>}
+ */
 export async function cancelWixBookingRecord(wixBookingId, revision, message = '') {
   if (!wixBookingId) return { updatedInWix: false, reason: 'NO_WIX_BOOKING_ID' };
   try {
@@ -303,6 +315,10 @@ export async function cancelWixBookingRecord(wixBookingId, revision, message = '
   }
 }
 
+/**
+ * @param {number} [limit]
+ * @returns {Promise<Record<string, any>>}
+ */
 export async function queryAllWixBookings(limit = 100) {
   try {
     const res = await callElevated(extendedBookings.queryExtendedBookings, {

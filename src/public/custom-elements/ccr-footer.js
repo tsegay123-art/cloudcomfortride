@@ -206,8 +206,8 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                   <button data-nav="/services">Specialized Services</button>
                   <button data-nav="/safety-drivers">Fleet &amp; Safety Standards</button>
                   <button data-nav="/about">About Our Company</button>
-                  <button data-nav="/book-a-ride">Book A Ride</button>
-                  <button data-nav="/my-booking">My Bookings &amp; Trip Vouchers</button>
+                  <button data-nav="/book-online">Book A Ride</button>
+                  <button data-nav="/my-booking">My Bookings</button>
                   <button data-nav="/contact">Contact &amp; Dispatch Support</button>
                 </div>
               </div>
@@ -257,7 +257,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
         <div class="mobile-float-bar">
           <a class="float-call" href="tel:${COMPANY_INFO.phoneRaw}">☎ Call Dispatch</a>
-          <button class="float-book" data-nav="/book-a-ride">📅 Book a Ride</button>
+          <button class="float-book" data-nav="/book-online">📅 Book a Ride</button>
         </div>
       `;
 

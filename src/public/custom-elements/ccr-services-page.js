@@ -141,7 +141,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         </section>
       `;
 
-      this.shadowRoot.getElementById('book-main').addEventListener('click', () => this._navigate('/book-a-ride'));
+      this.shadowRoot.getElementById('book-main').addEventListener('click', () => this._navigate('/book-online'));
       this.shadowRoot.querySelectorAll('[data-jump]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const target = this.shadowRoot.getElementById(`svc-${btn.getAttribute('data-jump')}`);
@@ -149,7 +149,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         });
       });
       this.shadowRoot.querySelectorAll('[data-book]').forEach((btn) => {
-        btn.addEventListener('click', () => this._navigate('/book-a-ride', btn.getAttribute('data-book')));
+        btn.addEventListener('click', () => this._navigate('/book-online', btn.getAttribute('data-book')));
       });
       initScrollReveals(this.shadowRoot);
     }

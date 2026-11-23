@@ -1,6 +1,6 @@
-import { applyPageSeo, wireDispatchElement } from 'public/veloPageBridge';
+import wixLocationFrontend from 'wix-location-frontend';
+import { resolveWixRoute } from 'public/veloPageBridge';
 
 $w.onReady(function () {
-  applyPageSeo('dispatch');
-  wireDispatchElement('#ccrDispatch');
+  wixLocationFrontend.to(resolveWixRoute('/book-online'));
 });

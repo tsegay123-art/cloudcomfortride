@@ -1,6 +1,5 @@
 import { COMPANY_INFO, IMAGES, TESTIMONIALS } from '../companyData';
 import { CCR_SHARED_CSS, dispatchCcrNavigation, ensureGoogleFonts, initScrollReveals, syncThemeHost } from './ccr-styles';
-import './ccr-booking-form';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrHomePage extends HTMLElement {
@@ -61,23 +60,6 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
     }
 
     _navigate(path, serviceId = '') {
-      let routeMap = {};
-      try {
-        const rawMap = this.getAttribute('route-map');
-        if (rawMap) routeMap = JSON.parse(rawMap);
-      } catch (e) {
-        routeMap = {};
-      }
-      const mapped = routeMap[path] || path;
-      if ((path === '/book-a-ride' || path === '/book-online') && mapped.includes('#request')) {
-        if (serviceId) {
-          const form = this.shadowRoot && this.shadowRoot.getElementById('home-booking-form');
-          if (form) form.setAttribute('initial-service', serviceId);
-        }
-        const req = this.shadowRoot && this.shadowRoot.getElementById('request');
-        if (req) req.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        return;
-      }
       dispatchCcrNavigation(this, path, serviceId);
     }
 
@@ -685,15 +667,24 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           </div>
         </section>
 
-        <!-- INLINE BOOKING FORM -->
+        <!-- WIX BOOKINGS CTA SECTION -->
         <section class="sec-alt" id="request">
-          <div class="container" style="max-width:1060px;">
+          <div class="container" style="max-width:960px;">
             <div class="sec-head">
               <span class="eyebrow"><span class="eyebrow-dot"></span> Let’s plan your trip</span>
               <h2>Book A <span style="color:var(--gold-accent);">Ride</span></h2>
-              <p>Share a few details and our Seattle dispatch team will follow up to confirm vehicle availability and coordinates.</p>
+              <p>Select your medical transportation service, choose an available time slot, and submit your request directly through our official Wix Bookings calendar.</p>
             </div>
-            <ccr-booking-form id="home-booking-form"></ccr-booking-form>
+            <div class="card" style="padding:36px;text-align:center;border-top:4px solid #f3bf28;">
+              <h3 style="font-size:24px;font-weight:800;margin-bottom:10px;">Ready to Schedule Your Transportation?</h3>
+              <p style="font-size:17px;color:var(--muted);max-width:600px;margin:0 auto 24px;line-height:1.6;">
+                Browse our active services, view real-time availability, and submit your booking request for dispatch approval.
+              </p>
+              <div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;">
+                <button class="dt-button" id="inline-wix-book">Open Wix Bookings Calendar →</button>
+                <a class="dt-button-outline" href="tel:${COMPANY_INFO.phoneRaw}">☎ Call ${COMPANY_INFO.phoneDisplay}</a>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -725,9 +716,11 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         </section>
       `;
 
-      this.shadowRoot.getElementById('hero-book').addEventListener('click', () => this._navigate('/book-a-ride'));
+      this.shadowRoot.getElementById('hero-book').addEventListener('click', () => this._navigate('/book-online'));
+      const inlineBook = this.shadowRoot.getElementById('inline-wix-book');
+      if (inlineBook) inlineBook.addEventListener('click', () => this._navigate('/book-online'));
       this.shadowRoot.querySelectorAll('[data-book]').forEach((btn) => {
-        btn.addEventListener('click', () => this._navigate('/book-a-ride', btn.getAttribute('data-book')));
+        btn.addEventListener('click', () => this._navigate('/book-online', btn.getAttribute('data-book')));
       });
       initScrollReveals(this.shadowRoot);
     }

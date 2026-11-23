@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { COMPANY_INFO, IMAGES } from '../companyData';
-import { getLocalBookings, THEME_STORAGE_KEY } from '../bookingHelpers';
+import { THEME_STORAGE_KEY } from '../bookingHelpers';
 import { CCR_SHARED_CSS, ensureGoogleFonts, syncThemeHost } from './ccr-styles';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
@@ -97,8 +97,6 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
     render() {
       const currentPath = this.getAttribute('current-path') || '/';
-      const attrCount = this.getAttribute('booking-count');
-      const bookingCount = attrCount !== null ? Number(attrCount) : getLocalBookings().length;
 
       const navLinks = [
         { label: 'Home', path: '/', aliases: ['/'] },
@@ -107,7 +105,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         { label: 'Why Cloud Comfort Ride', path: '/safety-drivers', aliases: ['/safety-drivers', '/why-cloud-comfort-ride', '/why-cloud-medical'] },
         { label: 'Fleet', path: '/fleet', aliases: ['/fleet'] },
         { label: 'Contact Us', path: '/contact', aliases: ['/contact', '/contact-us'] },
-        { label: 'My Bookings', path: '/my-booking', aliases: ['/my-bookings', '/my-booking'], badge: bookingCount > 0 ? bookingCount : null }
+        { label: 'My Bookings', path: '/my-booking', aliases: ['/my-bookings', '/my-booking', '/account/my-bookings'] }
       ];
       const isLinkActive = (link) => link.aliases.includes(currentPath);
 
@@ -377,7 +375,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               <button class="icon-btn" id="theme-toggle-desktop" aria-label="Toggle dark mode" title="Toggle Light/Dark Mode">
                 ${this._theme === 'dark' ? '☀' : '☾'}
               </button>
-              <button class="dt-button book-pill" data-nav="/book-a-ride">
+              <button class="dt-button book-pill" data-nav="/book-online">
                 <span style="color:#f3bf28">📅</span>
                 <span>Book A Ride</span>
               </button>
@@ -387,7 +385,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               <button class="icon-btn" id="theme-toggle-mobile" aria-label="Toggle dark mode">
                 ${this._theme === 'dark' ? '☀' : '☾'}
               </button>
-              <button class="dt-button book-pill" data-nav="/book-a-ride">Book</button>
+              <button class="dt-button book-pill" data-nav="/book-online">Book</button>
               <button class="icon-btn" id="menu-toggle" aria-label="Toggle menu" aria-expanded="${this._mobileOpen}">
                 ${this._mobileOpen ? '✕' : '☰'}
               </button>
@@ -403,7 +401,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                 </button>
               `).join('')}
               <div style="display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid var(--line);">
-                <button class="dt-button" data-nav="/book-a-ride">📅 Book A Ride Online</button>
+                <button class="dt-button" data-nav="/book-online">📅 Book A Ride Online</button>
                 <a class="dt-button-outline" href="tel:${COMPANY_INFO.phoneRaw}">☎ Call Us: ${COMPANY_INFO.phoneDisplay}</a>
               </div>
             </div>

@@ -29,8 +29,9 @@ const ROUTE_ALIASES = {
   '/why-cloud-comfort-ride': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
   '/fleet': { urls: ['/fleet', '/why-cloud-comfort-ride', '/safety-drivers'], names: ['fleet', 'why cloud comfort ride', 'why cloud medical'] },
   '/why-cloud-medical': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
-  '/book-a-ride': { urls: ['/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
-  '/book-online': { urls: ['/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
+  '/book-a-ride': { urls: ['/book-online', '/booking-calendar', '/service-page'], names: ['book online', 'booking calendar', 'service page'] },
+  '/book-online': { urls: ['/book-online', '/booking-calendar', '/service-page'], names: ['book online', 'booking calendar', 'service page'] },
+  '/booking-calendar': { urls: ['/booking-calendar', '/book-online'], names: ['booking calendar', 'book online'] },
   '/my-bookings': { urls: ['/my-booking'], names: ['my booking'] },
   '/my-booking': { urls: ['/my-booking'], names: ['my booking'] },
   '/contact': { urls: ['/contact', '/contact-us'], names: ['contact'] },
@@ -62,39 +63,18 @@ export function resolveWixRoute(requestedPath) {
       return home && home.url ? normUrl(home.url) : '/';
     }
 
-    const SYSTEM_BOOKING_URLS = ['/book-online', '/booking-form', '/booking-calendar', '/service-page'];
-    const SYSTEM_MEMBER_BOOKING_URLS = ['/account/my-bookings', '/my-bookings'];
-    const isBookingTarget = clean === '/book-a-ride' || clean === '/book-online';
-    const isMyBookingsTarget = clean === '/my-bookings' || clean === '/my-booking';
-
-    const isAllowedPage = (p) => {
-      const u = normUrl(p.url);
-      if (isBookingTarget && SYSTEM_BOOKING_URLS.includes(u)) return false;
-      if (isMyBookingsTarget && SYSTEM_MEMBER_BOOKING_URLS.includes(u)) return false;
-      return true;
-    };
-
-    if (!isMyBookingsTarget) {
-      const exact = pages.find((p) => normUrl(p.url) === clean && isAllowedPage(p));
-      if (exact && exact.url) return normUrl(exact.url);
-    }
+    const exact = pages.find((p) => normUrl(p.url) === clean);
+    if (exact && exact.url) return normUrl(exact.url);
 
     const rule = ROUTE_ALIASES[clean];
     if (rule) {
       for (const candidateUrl of rule.urls) {
-        const byAliasUrl = pages.find((p) => normUrl(p.url) === candidateUrl && isAllowedPage(p));
+        const byAliasUrl = pages.find((p) => normUrl(p.url) === candidateUrl);
         if (byAliasUrl && byAliasUrl.url) return normUrl(byAliasUrl.url);
       }
 
       for (const candidateName of rule.names) {
-        const byName = pages.find((p) => {
-          if (!isAllowedPage(p)) return false;
-          const pname = String(p.name || '').toLowerCase();
-          if (isBookingTarget && (pname.includes('my booking') || pname.includes('book online') || pname.includes('booking form'))) {
-            return false;
-          }
-          return pname.includes(candidateName);
-        });
+        const byName = pages.find((p) => String(p.name || '').toLowerCase().includes(candidateName));
         if (byName && byName.url) return normUrl(byName.url);
       }
     }
@@ -103,9 +83,7 @@ export function resolveWixRoute(requestedPath) {
       return '/my-booking';
     }
     if (clean === '/book-a-ride' || clean === '/book-online') {
-      const home = pages.find((p) => p.isHomePage);
-      const homeUrl = home && home.url ? normUrl(home.url) : '/';
-      return `${homeUrl}?book=1#request`;
+      return '/book-online';
     }
   } catch (e) {
     // Fallback to requested path if site structure is unavailable
@@ -490,43 +468,18 @@ export async function wireMyBookingsElement(selector) {
   targets.forEach((el) => {
     if (!markWired(el, 'myBookings')) return;
 
-    // Auto-load bookings for logged-in members on page mount
-    import('backend/getMyBookings.web')
-      .then((mod) => (mod && mod.getMyBookings ? mod.getMyBookings('') : null))
-      .then((res) => {
-        if (res && res.success && Array.isArray(res.items) && res.items.length > 0) {
-          el.setAttribute('lookup-error', '');
-          el.setAttribute('server-bookings', JSON.stringify(res.items));
-        }
-      })
-      .catch(() => {});
-
     el.on('lookupBooking', async (event) => {
       const detail = (event && event.detail) || {};
       const query = String(detail.query || detail.bookingReference || '').trim();
       try {
-        let res = null;
-        if (detail.verifier) {
-          res = await lookupVerifiedBooking(query, detail.verifier);
-        } else {
-          try {
-            const mod = await import('backend/getMyBookings.web');
-            if (mod && mod.getMyBookings) res = await mod.getMyBookings(query);
-          } catch (e) {
-            res = null;
-          }
-        }
+        const res = detail.verifier
+          ? await lookupVerifiedBooking(query, detail.verifier)
+          : await searchCustomerBookings(query);
         if (res && res.success && Array.isArray(res.items) && res.items.length > 0) {
           el.setAttribute('lookup-error', '');
           el.setAttribute('server-bookings', JSON.stringify(res.items));
         } else {
-          const fallback = await searchCustomerBookings(query);
-          if (fallback && fallback.success && Array.isArray(fallback.items)) {
-            el.setAttribute('lookup-error', '');
-            el.setAttribute('server-bookings', JSON.stringify(fallback.items));
-          } else {
-            el.setAttribute('lookup-error', (res && res.message) || (fallback && fallback.message) || 'No matching booking found.');
-          }
+          el.setAttribute('lookup-error', (res && res.message) || 'No matching booking found.');
         }
       } catch (e) {
         el.setAttribute('lookup-error', 'Unable to look up booking right now. Please call (206) 327-4411.');
@@ -536,13 +489,7 @@ export async function wireMyBookingsElement(selector) {
     el.on('cancelMyBooking', async (event) => {
       const detail = (event && event.detail) || {};
       try {
-        let res = null;
-        try {
-          const mod = await import('backend/getMyBookings.web');
-          if (mod && mod.cancelMyBooking) res = await mod.cancelMyBooking(detail.bookingId, detail.verifier || '');
-        } catch (e) {
-          res = await cancelBooking(detail.bookingId, detail.verifier || '');
-        }
+        const res = await cancelBooking(detail.bookingId, detail.verifier || '');
         if (res && res.success) {
           const refreshed = await searchCustomerBookings(detail.verifier || detail.bookingId || '');
           el.setAttribute('lookup-error', '');
@@ -576,16 +523,6 @@ export function wireDispatchElement(selector) {
     if (!markWired(el, 'dispatch')) return;
 
     const reloadDispatchPayload = async (tokenOrPin, extraUser = null) => {
-      let auditItems = [];
-      try {
-        const authMod = await import('backend/authService.jsw');
-        if (authMod && authMod.listAuditLogs) {
-          const aRes = await authMod.listAuditLogs(tokenOrPin);
-          auditItems = (aRes && aRes.items) || [];
-        }
-      } catch (e) {
-        auditItems = [];
-      }
       const [bRes, iRes] = await Promise.all([
         listAllBookings(tokenOrPin),
         listAllInquiries(tokenOrPin)
@@ -599,7 +536,7 @@ export function wireDispatchElement(selector) {
           inquiries: (iRes && iRes.items) || [],
           drivers: bRes.drivers || [],
           vehicles: bRes.vehicles || [],
-          auditLogs: auditItems,
+          auditLogs: [],
           wixBookingsCount: bRes.wixBookingsCount || 0
         }));
         return true;
@@ -611,15 +548,8 @@ export function wireDispatchElement(selector) {
     el.on('dispatchLogin', async (event) => {
       const detail = (event && event.detail) || {};
       const pin = detail.pin || '';
-      const username = detail.username || 'admin';
       try {
-        const authMod = await import('backend/authService.jsw');
-        const loginRes = authMod && authMod.adminLogin ? await authMod.adminLogin(pin, username) : { success: true, token: pin };
-        if (!loginRes || !loginRes.success) {
-          el.setAttribute('dispatch-error', (loginRes && loginRes.message) || 'Invalid Administrator credentials.');
-          return;
-        }
-        await reloadDispatchPayload(loginRes.token || pin, loginRes.user || null);
+        await reloadDispatchPayload(pin, null);
       } catch (err) {
         el.setAttribute('dispatch-error', 'Unable to load admin dashboard data.');
       }

@@ -51,16 +51,6 @@ function matchesQuery(item, q) {
 }
 
 async function getMemberEmailIfLoggedIn() {
-  try {
-    const mod = await import('wix-members-backend');
-    const member = mod && mod.currentMember ? await mod.currentMember.getMember() : null;
-    if (member && member.loginEmail) return String(member.loginEmail).trim().toLowerCase();
-    if (member && member.contactDetails && Array.isArray(member.contactDetails.emails) && member.contactDetails.emails.length) {
-      return String(member.contactDetails.emails[0]).trim().toLowerCase();
-    }
-  } catch (e) {
-    // Guest visitor or members module not installed
-  }
   return '';
 }
 
