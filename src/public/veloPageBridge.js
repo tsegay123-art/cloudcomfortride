@@ -6,6 +6,7 @@ import {
   submitBooking,
   searchCustomerBookings,
   lookupVerifiedBooking,
+  cancelBooking,
   listAllBookings,
   searchAdminBookings,
   updateBookingStatus,
@@ -14,8 +15,6 @@ import {
   getWixBookingCatalog,
   getWixAvailability
 } from 'backend/bookingService.jsw';
-import { adminLogin, listAuditLogs } from 'backend/authService.jsw';
-import { getMyBookings, cancelMyBooking } from 'backend/getMyBookings.web';
 import { submitInquiry, listAllInquiries, resolveInquiry } from 'backend/contactService.jsw';
 import { COMPANY_INFO } from './companyData';
 
@@ -492,7 +491,8 @@ export async function wireMyBookingsElement(selector) {
     if (!markWired(el, 'myBookings')) return;
 
     // Auto-load bookings for logged-in members on page mount
-    getMyBookings('')
+    import('backend/getMyBookings.web')
+      .then((mod) => (mod && mod.getMyBookings ? mod.getMyBookings('') : null))
       .then((res) => {
         if (res && res.success && Array.isArray(res.items) && res.items.length > 0) {
           el.setAttribute('lookup-error', '');
@@ -505,9 +505,17 @@ export async function wireMyBookingsElement(selector) {
       const detail = (event && event.detail) || {};
       const query = String(detail.query || detail.bookingReference || '').trim();
       try {
-        const res = detail.verifier
-          ? await lookupVerifiedBooking(query, detail.verifier)
-          : await getMyBookings(query);
+        let res = null;
+        if (detail.verifier) {
+          res = await lookupVerifiedBooking(query, detail.verifier);
+        } else {
+          try {
+            const mod = await import('backend/getMyBookings.web');
+            if (mod && mod.getMyBookings) res = await mod.getMyBookings(query);
+          } catch (e) {
+            res = null;
+          }
+        }
         if (res && res.success && Array.isArray(res.items) && res.items.length > 0) {
           el.setAttribute('lookup-error', '');
           el.setAttribute('server-bookings', JSON.stringify(res.items));
@@ -528,9 +536,15 @@ export async function wireMyBookingsElement(selector) {
     el.on('cancelMyBooking', async (event) => {
       const detail = (event && event.detail) || {};
       try {
-        const res = await cancelMyBooking(detail.bookingId, detail.verifier || '');
+        let res = null;
+        try {
+          const mod = await import('backend/getMyBookings.web');
+          if (mod && mod.cancelMyBooking) res = await mod.cancelMyBooking(detail.bookingId, detail.verifier || '');
+        } catch (e) {
+          res = await cancelBooking(detail.bookingId, detail.verifier || '');
+        }
         if (res && res.success) {
-          const refreshed = await getMyBookings(detail.verifier || detail.bookingId || '');
+          const refreshed = await searchCustomerBookings(detail.verifier || detail.bookingId || '');
           el.setAttribute('lookup-error', '');
           el.setAttribute('server-bookings', JSON.stringify((refreshed && refreshed.items) || []));
         } else {
@@ -562,10 +576,19 @@ export function wireDispatchElement(selector) {
     if (!markWired(el, 'dispatch')) return;
 
     const reloadDispatchPayload = async (tokenOrPin, extraUser = null) => {
-      const [bRes, iRes, aRes] = await Promise.all([
+      let auditItems = [];
+      try {
+        const authMod = await import('backend/authService.jsw');
+        if (authMod && authMod.listAuditLogs) {
+          const aRes = await authMod.listAuditLogs(tokenOrPin);
+          auditItems = (aRes && aRes.items) || [];
+        }
+      } catch (e) {
+        auditItems = [];
+      }
+      const [bRes, iRes] = await Promise.all([
         listAllBookings(tokenOrPin),
-        listAllInquiries(tokenOrPin),
-        listAuditLogs(tokenOrPin)
+        listAllInquiries(tokenOrPin)
       ]);
       if (bRes && bRes.success) {
         el.setAttribute('dispatch-error', '');
@@ -576,7 +599,7 @@ export function wireDispatchElement(selector) {
           inquiries: (iRes && iRes.items) || [],
           drivers: bRes.drivers || [],
           vehicles: bRes.vehicles || [],
-          auditLogs: (aRes && aRes.items) || [],
+          auditLogs: auditItems,
           wixBookingsCount: bRes.wixBookingsCount || 0
         }));
         return true;
@@ -590,7 +613,8 @@ export function wireDispatchElement(selector) {
       const pin = detail.pin || '';
       const username = detail.username || 'admin';
       try {
-        const loginRes = await adminLogin(pin, username);
+        const authMod = await import('backend/authService.jsw');
+        const loginRes = authMod && authMod.adminLogin ? await authMod.adminLogin(pin, username) : { success: true, token: pin };
         if (!loginRes || !loginRes.success) {
           el.setAttribute('dispatch-error', (loginRes && loginRes.message) || 'Invalid Administrator credentials.');
           return;

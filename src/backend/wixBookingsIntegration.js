@@ -1,12 +1,21 @@
 import { services, availabilityCalendar, bookings, extendedBookings } from 'wix-bookings.v2';
-import { elevate } from 'wix-auth';
 
-function safeElevate(fn) {
+let cachedElevate = null;
+async function getElevate() {
+  if (cachedElevate !== null) return cachedElevate;
   try {
-    return typeof elevate === 'function' ? elevate(fn) : fn;
+    const mod = await import('wix-auth');
+    cachedElevate = (mod && typeof mod.elevate === 'function') ? mod.elevate : false;
   } catch (e) {
-    return fn;
+    cachedElevate = false;
   }
+  return cachedElevate;
+}
+
+async function callElevated(fn, ...args) {
+  const elevateFn = await getElevate();
+  const target = elevateFn ? elevateFn(fn) : fn;
+  return target(...args);
 }
 
 /**
@@ -14,8 +23,7 @@ function safeElevate(fn) {
  */
 export async function listWixServices() {
   try {
-    const queryFn = safeElevate(() => services.queryServices().limit(50).find());
-    const res = await queryFn();
+    const res = await callElevated(() => services.queryServices().limit(50).find());
     const items = (res && res.items) || [];
     return {
       success: true,
@@ -188,8 +196,8 @@ export async function createWixBookingRecord(payload, bookingReference) {
     : 0;
 
   try {
-    const createFn = safeElevate(bookings.createBooking);
-    const created = await createFn(
+    const created = await callElevated(
+      bookings.createBooking,
       {
         bookedEntity: { slot: selectedSlot },
         contactDetails: {
@@ -248,8 +256,7 @@ export async function createWixBookingRecord(payload, bookingReference) {
 export async function confirmWixBookingRecord(wixBookingId, revision, message = '') {
   if (!wixBookingId) return { updatedInWix: false, reason: 'NO_WIX_BOOKING_ID' };
   try {
-    const fn = safeElevate(bookings.confirmBooking);
-    const res = await fn(wixBookingId, revision || '1', {
+    const res = await callElevated(bookings.confirmBooking, wixBookingId, revision || '1', {
       participantNotification: {
         notifyParticipants: Boolean(message),
         message: message || undefined
@@ -265,8 +272,7 @@ export async function confirmWixBookingRecord(wixBookingId, revision, message = 
 export async function declineWixBookingRecord(wixBookingId, revision, message = '') {
   if (!wixBookingId) return { updatedInWix: false, reason: 'NO_WIX_BOOKING_ID' };
   try {
-    const fn = safeElevate(bookings.declineBooking);
-    const res = await fn(wixBookingId, revision || '1', {
+    const res = await callElevated(bookings.declineBooking, wixBookingId, revision || '1', {
       participantNotification: {
         notifyParticipants: Boolean(message),
         message: message || undefined
@@ -282,8 +288,7 @@ export async function declineWixBookingRecord(wixBookingId, revision, message = 
 export async function cancelWixBookingRecord(wixBookingId, revision, message = '') {
   if (!wixBookingId) return { updatedInWix: false, reason: 'NO_WIX_BOOKING_ID' };
   try {
-    const fn = safeElevate(bookings.cancelBooking);
-    const res = await fn(wixBookingId, {
+    const res = await callElevated(bookings.cancelBooking, wixBookingId, {
       revision: revision || '1',
       flowControlSettings: { ignoreCancellationPolicy: true },
       participantNotification: {
@@ -300,8 +305,7 @@ export async function cancelWixBookingRecord(wixBookingId, revision, message = '
 
 export async function queryAllWixBookings(limit = 100) {
   try {
-    const fn = safeElevate(extendedBookings.queryExtendedBookings);
-    const res = await fn({
+    const res = await callElevated(extendedBookings.queryExtendedBookings, {
       cursorPaging: { limit: Math.min(limit, 100) }
     });
     const items = (res && res.extendedBookings) || [];

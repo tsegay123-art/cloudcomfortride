@@ -1,6 +1,5 @@
 import { Permissions, webMethod } from 'wix-web-module';
 import wixData from 'wix-data';
-import { currentMember } from 'wix-members-backend';
 import { getServiceTitle } from 'public/companyData';
 import { queryAllWixBookings, cancelWixBookingRecord } from './wixBookingsIntegration';
 
@@ -53,13 +52,14 @@ function matchesQuery(item, q) {
 
 async function getMemberEmailIfLoggedIn() {
   try {
-    const member = await currentMember.getMember();
+    const mod = await import('wix-members-backend');
+    const member = mod && mod.currentMember ? await mod.currentMember.getMember() : null;
     if (member && member.loginEmail) return String(member.loginEmail).trim().toLowerCase();
     if (member && member.contactDetails && Array.isArray(member.contactDetails.emails) && member.contactDetails.emails.length) {
       return String(member.contactDetails.emails[0]).trim().toLowerCase();
     }
   } catch (e) {
-    // Guest visitor
+    // Guest visitor or members module not installed
   }
   return '';
 }
