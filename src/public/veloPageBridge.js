@@ -15,6 +15,7 @@ import {
   getWixAvailability
 } from 'backend/bookingService.jsw';
 import { adminLogin, listAuditLogs } from 'backend/authService.jsw';
+import { getMyBookings, cancelMyBooking } from 'backend/getMyBookings.web';
 import { submitInquiry, listAllInquiries, resolveInquiry } from 'backend/contactService.jsw';
 import { COMPANY_INFO } from './companyData';
 
@@ -469,21 +470,54 @@ export async function wireMyBookingsElement(selector) {
 
   targets.forEach((el) => {
     if (!markWired(el, 'myBookings')) return;
+
+    // Auto-load bookings for logged-in members on page mount
+    getMyBookings('')
+      .then((res) => {
+        if (res && res.success && Array.isArray(res.items) && res.items.length > 0) {
+          el.setAttribute('lookup-error', '');
+          el.setAttribute('server-bookings', JSON.stringify(res.items));
+        }
+      })
+      .catch(() => {});
+
     el.on('lookupBooking', async (event) => {
       const detail = (event && event.detail) || {};
       const query = String(detail.query || detail.bookingReference || '').trim();
       try {
         const res = detail.verifier
           ? await lookupVerifiedBooking(query, detail.verifier)
-          : await searchCustomerBookings(query);
-        if (res && res.success && Array.isArray(res.items)) {
+          : await getMyBookings(query);
+        if (res && res.success && Array.isArray(res.items) && res.items.length > 0) {
           el.setAttribute('lookup-error', '');
           el.setAttribute('server-bookings', JSON.stringify(res.items));
         } else {
-          el.setAttribute('lookup-error', (res && res.message) || 'No matching booking found.');
+          const fallback = await searchCustomerBookings(query);
+          if (fallback && fallback.success && Array.isArray(fallback.items)) {
+            el.setAttribute('lookup-error', '');
+            el.setAttribute('server-bookings', JSON.stringify(fallback.items));
+          } else {
+            el.setAttribute('lookup-error', (res && res.message) || (fallback && fallback.message) || 'No matching booking found.');
+          }
         }
       } catch (e) {
         el.setAttribute('lookup-error', 'Unable to look up booking right now. Please call (206) 327-4411.');
+      }
+    });
+
+    el.on('cancelMyBooking', async (event) => {
+      const detail = (event && event.detail) || {};
+      try {
+        const res = await cancelMyBooking(detail.bookingId, detail.verifier || '');
+        if (res && res.success) {
+          const refreshed = await getMyBookings(detail.verifier || detail.bookingId || '');
+          el.setAttribute('lookup-error', '');
+          el.setAttribute('server-bookings', JSON.stringify((refreshed && refreshed.items) || []));
+        } else {
+          el.setAttribute('lookup-error', (res && res.message) || 'Unable to cancel booking.');
+        }
+      } catch (e) {
+        el.setAttribute('lookup-error', 'Unable to cancel booking right now. Please call (206) 327-4411.');
       }
     });
   });

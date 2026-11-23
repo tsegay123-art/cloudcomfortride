@@ -12,9 +12,11 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       super();
       this.attachShadow({ mode: 'open' });
       this._search = '';
+      this._tab = 'upcoming';
       this._hasSearched = false;
       this._loading = false;
       this._lookupError = '';
+      this._cancelNotice = '';
       this._bookings = [];
       this._voucherBooking = null;
       this._onThemeSync = () => syncThemeHost(this);
@@ -61,7 +63,15 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
     }
 
     render() {
-      const filtered = this._bookings;
+      const upcomingList = this._bookings.filter((b) => {
+        if (typeof b.isUpcoming === 'boolean') return b.isUpcoming;
+        const st = String(b.bookingStatus || b.status || 'Pending').toLowerCase();
+        return st !== 'cancelled' && st !== 'rejected' && st !== 'completed';
+      });
+      const pastList = this._bookings.filter((b) => !upcomingList.includes(b));
+      const filtered = this._tab === 'upcoming'
+        ? upcomingList
+        : (this._tab === 'past' ? pastList : this._bookings);
       const statusBadgeStyle = (rawStatus) => {
         const st = String(rawStatus || 'Pending').toLowerCase();
         if (st === 'confirmed') return 'background:#dcfce7;color:#166534;';
@@ -167,6 +177,15 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               <button class="dt-button" id="new-ride-btn">+ Book Another Ride</button>
             </div>
             ${this._lookupError ? `<div role="alert" style="padding:14px 18px;border-radius:12px;background:#fef2f2;border:1.5px solid #dc2626;color:#991b1b;font-size:16px;font-weight:700;margin-bottom:18px;">${this._lookupError}</div>` : ''}
+            ${this._cancelNotice ? `<div role="status" style="padding:14px 18px;border-radius:12px;background:#ecfdf5;border:1.5px solid #16a34a;color:#14532d;font-size:16px;font-weight:700;margin-bottom:18px;">✓ ${this._cancelNotice}</div>` : ''}
+
+            ${this._bookings.length > 0 ? `
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
+                <button class="${this._tab === 'upcoming' ? 'dt-button' : 'dt-button-outline'}" data-my-tab="upcoming" style="min-height:44px;padding:8px 18px;">Upcoming (${upcomingList.length})</button>
+                <button class="${this._tab === 'past' ? 'dt-button' : 'dt-button-outline'}" data-my-tab="past" style="min-height:44px;padding:8px 18px;">Past (${pastList.length})</button>
+                <button class="${this._tab === 'all' ? 'dt-button' : 'dt-button-outline'}" data-my-tab="all" style="min-height:44px;padding:8px 18px;">All (${this._bookings.length})</button>
+              </div>
+            ` : ''}
 
             ${filtered.length === 0 ? `
               <div class="card" style="padding:52px 24px;text-align:center;">
@@ -195,6 +214,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                     </div>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;">
                       <button class="dt-button" style="padding:10px 16px;font-size:15px;min-height:44px;" data-voucher="${bid}">🖨 Trip Voucher</button>
+                      ${String(liveStatus).toLowerCase() === 'pending' || String(liveStatus).toLowerCase() === 'confirmed' ? `
+                        <button class="dt-button-outline" style="padding:10px 14px;font-size:15px;min-height:44px;border-color:#dc2626;color:#dc2626;" data-cancel-booking="${bid}">Cancel / Request Change</button>
+                      ` : ''}
                     </div>
                   </div>
                   <div class="b-grid">
@@ -256,6 +278,27 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       this.shadowRoot.getElementById('new-ride-btn').addEventListener('click', () => this._navigate('/book-a-ride'));
       const emptyBook = this.shadowRoot.getElementById('empty-book');
       if (emptyBook) emptyBook.addEventListener('click', () => this._navigate('/book-a-ride'));
+
+      this.shadowRoot.querySelectorAll('[data-my-tab]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          this._tab = btn.getAttribute('data-my-tab') || 'upcoming';
+          this.render();
+        });
+      });
+
+      this.shadowRoot.querySelectorAll('[data-cancel-booking]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-cancel-booking');
+          this._cancelNotice = `Cancellation / change request submitted for ${id}.`;
+          this._loading = true;
+          this.render();
+          this.dispatchEvent(new CustomEvent('cancelMyBooking', {
+            detail: { bookingId: id, verifier: this._search },
+            bubbles: true,
+            composed: true
+          }));
+        });
+      });
 
       this.shadowRoot.querySelectorAll('[data-voucher]').forEach((btn) => {
         btn.addEventListener('click', () => {

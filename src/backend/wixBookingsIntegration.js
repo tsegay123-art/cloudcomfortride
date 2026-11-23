@@ -81,6 +81,15 @@ export async function queryWixServiceAvailability(serviceId, pickupDate, timezon
   }
 }
 
+const SERVICE_TYPE_KEYWORDS = {
+  therapy: ['therapy', 'physical therapy', 'rehab', 'occupational'],
+  wheelchair: ['wheelchair', 'ada', 'lift', 'ramp'],
+  dialysis: ['dialysis'],
+  non_emergency: ['non-emergency', 'nemt', 'medical', 'appointment'],
+  hospital_discharge: ['discharge', 'hospital'],
+  senior_private: ['senior', 'private', 'ambulatory']
+};
+
 function findMatchingService(wixServices, serviceType, requestedServiceId) {
   if (!Array.isArray(wixServices) || !wixServices.length) return null;
   if (requestedServiceId) {
@@ -89,8 +98,14 @@ function findMatchingService(wixServices, serviceType, requestedServiceId) {
   }
   const needle = String(serviceType || '').toLowerCase().replace(/[_-]+/g, ' ').trim();
   if (!needle) return wixServices[0];
-  const byName = wixServices.find((s) => String(s.name || '').toLowerCase().includes(needle));
-  return byName || wixServices[0];
+
+  const key = String(serviceType || '').toLowerCase().trim();
+  const keywords = SERVICE_TYPE_KEYWORDS[key] || [needle];
+  const byKeyword = wixServices.find((s) => {
+    const sName = String(s.name || '').toLowerCase();
+    return keywords.some((kw) => sName.includes(kw));
+  });
+  return byKeyword || wixServices[0];
 }
 
 function pickBestSlot(slots, pickupTime) {

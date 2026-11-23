@@ -210,7 +210,7 @@ export async function submitBooking(payload) {
 
   // Duplicate submission guard (within last 5 minutes)
   try {
-    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
     const dupQuery = clientRequestId
       ? wixData.query(collectionId).eq('clientRequestId', clientRequestId)
       : wixData.query(collectionId)
@@ -235,7 +235,7 @@ export async function submitBooking(payload) {
 
   const randomSuffix = Math.floor(1000 + Math.random() * 9000);
   const bookingId = `CCR-${new Date().getFullYear()}-${randomSuffix}`;
-  const nowIso = new Date().toISOString();
+  const nowDate = new Date();
   const serviceTitle = getServiceTitle(String(payload.serviceType));
   const hasCompanion = Boolean(payload.hasCompanion ?? payload.companionRequired);
   const companionCount = hasCompanion ? Number(payload.companionCount || 1) : 0;
@@ -250,8 +250,8 @@ export async function submitBooking(payload) {
     wixRevision: wixRes.wixRevision || '',
     wixStatus: wixRes.wixStatus || (wixRes.createdInWix ? 'PENDING' : 'CMS_ONLY'),
     wixServiceId: wixRes.wixServiceId || '',
-    createdAt: nowIso,
-    updatedAt: nowIso,
+    createdAt: nowDate,
+    updatedAt: nowDate,
     bookingStatus: 'Pending',
     serviceType: String(payload.serviceType),
     serviceTitle,
@@ -388,7 +388,7 @@ export async function submitBooking(payload) {
     await wixData.update(collectionId, {
       ...insertedItem,
       notificationStatus,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date()
     }, { suppressAuth: true });
   } catch (e) {
     // Non-fatal update error
@@ -548,7 +548,7 @@ export async function cancelBooking(bookingReference, verifier = '') {
       ...item,
       bookingStatus: 'Cancelled',
       status: 'Cancelled',
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date()
     }, { suppressAuth: true });
 
     return { success: true, bookingReference: ref };
@@ -768,7 +768,7 @@ export async function updateBookingStatus(pinOrToken, bookingReference, nextStat
       wixRevision,
       ownerNotes: reasonText || current.ownerNotes || '',
       rejectionReason: normalized === 'Rejected' ? (reasonText || current.rejectionReason || '') : (current.rejectionReason || ''),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date()
     };
     await wixData.update(collectionId, updated, { suppressAuth: true });
 
@@ -860,7 +860,7 @@ export async function editBookingDetails(pin, bookingReference, updates = {}) {
       ownerNotes: updates.ownerNotes !== undefined ? String(updates.ownerNotes).trim() : (current.ownerNotes || ''),
       bookingStatus: nextStatus || getRecordStatus(current),
       status: nextStatus || getRecordStatus(current),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date()
     };
 
     await wixData.update(collectionId, updated, { suppressAuth: true });

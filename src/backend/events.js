@@ -33,7 +33,7 @@ async function syncWixBookingLifecycle(event, mappedStatus, actionName) {
           status: mappedStatus,
           wixStatus: booking.status || mappedStatus.toUpperCase(),
           wixRevision: booking.revision || current.wixRevision || '',
-          updatedAt: nowIso
+          updatedAt: new Date()
         }, { suppressAuth: true });
       }
       break;
