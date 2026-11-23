@@ -1,6 +1,5 @@
-import { COMPANY_INFO, IMAGES, TESTIMONIALS } from '../companyData';
+import { BOOKING_SERVICE_OPTIONS, COMPANY_INFO, IMAGES, TESTIMONIALS } from '../companyData';
 import { CCR_SHARED_CSS, dispatchCcrNavigation, ensureGoogleFonts, initScrollReveals, syncThemeHost } from './ccr-styles';
-import './ccr-booking-form';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrHomePage extends HTMLElement {
@@ -61,23 +60,6 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
     }
 
     _navigate(path, serviceId = '') {
-      let routeMap = {};
-      try {
-        const rawMap = this.getAttribute('route-map');
-        if (rawMap) routeMap = JSON.parse(rawMap);
-      } catch (e) {
-        routeMap = {};
-      }
-      const mapped = routeMap[path] || path;
-      if ((path === '/book-a-ride' || path === '/book-online') && mapped.includes('#request')) {
-        if (serviceId) {
-          const form = this.shadowRoot && this.shadowRoot.getElementById('home-booking-form');
-          if (form) form.setAttribute('initial-service', serviceId);
-        }
-        const req = this.shadowRoot && this.shadowRoot.getElementById('request');
-        if (req) req.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        return;
-      }
       dispatchCcrNavigation(this, path, serviceId);
     }
 
@@ -685,15 +667,24 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           </div>
         </section>
 
-        <!-- INLINE BOOKING FORM -->
+        <!-- WIX BOOKINGS DIRECT SELECTOR -->
         <section class="sec-alt" id="request">
-          <div class="container" style="max-width:1060px;">
+          <div class="container" style="max-width:760px;">
             <div class="sec-head">
-              <span class="eyebrow"><span class="eyebrow-dot"></span> Let’s plan your trip</span>
+              <span class="eyebrow"><span class="eyebrow-dot"></span> Official Wix Bookings</span>
               <h2>Book A <span style="color:var(--gold-accent);">Ride</span></h2>
-              <p>Select your transportation service from the dropdown below and submit your trip details.</p>
+              <p>Select your medical transportation service from the dropdown below to open the official Wix Booking Calendar &amp; Booking Form.</p>
             </div>
-            <ccr-booking-form id="home-booking-form"></ccr-booking-form>
+            <div class="card" style="padding:32px;border-top:4px solid #f3bf28;">
+              <label for="wix-service-select" style="display:block;font-size:16px;font-weight:800;margin-bottom:10px;">Select Service &amp; Transportation Type</label>
+              <select id="wix-service-select" style="width:100%;min-height:52px;padding:12px 16px;border-radius:12px;border:1.5px solid var(--card-border);background:var(--surface-alt);color:var(--ink);font-size:16px;margin-bottom:20px;">
+                ${BOOKING_SERVICE_OPTIONS.map((opt) => `<option value="${opt.value}">${opt.label}</option>`).join('')}
+              </select>
+              <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;">
+                <button class="dt-button" id="inline-wix-book" style="min-height:52px;padding:12px 26px;">Continue to Wix Booking Form →</button>
+                <a class="dt-button-outline" href="tel:${COMPANY_INFO.phoneRaw}" style="min-height:52px;padding:12px 22px;">☎ Call ${COMPANY_INFO.phoneDisplay}</a>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -725,9 +716,16 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         </section>
       `;
 
-      this.shadowRoot.getElementById('hero-book').addEventListener('click', () => this._navigate('/book-a-ride'));
+      this.shadowRoot.getElementById('hero-book').addEventListener('click', () => this._navigate('/booking-calendar'));
+      const inlineBook = this.shadowRoot.getElementById('inline-wix-book');
+      if (inlineBook) {
+        inlineBook.addEventListener('click', () => {
+          const sel = /** @type {HTMLSelectElement | null} */ (this.shadowRoot.getElementById('wix-service-select'));
+          this._navigate('/booking-calendar', sel ? sel.value : '');
+        });
+      }
       this.shadowRoot.querySelectorAll('[data-book]').forEach((btn) => {
-        btn.addEventListener('click', () => this._navigate('/book-a-ride', btn.getAttribute('data-book')));
+        btn.addEventListener('click', () => this._navigate('/booking-calendar', btn.getAttribute('data-book')));
       });
       initScrollReveals(this.shadowRoot);
     }
