@@ -82,12 +82,19 @@ export async function queryWixServiceAvailability(serviceId, pickupDate, timezon
 }
 
 const SERVICE_TYPE_KEYWORDS = {
-  therapy: ['therapy', 'physical therapy', 'rehab', 'occupational'],
+  therapy: ['physical therapy', 'therapy', 'rehabilitation', 'rehab', 'occupational'],
+  rehabilitation: ['physical therapy', 'rehabilitation', 'therapy', 'hospital discharge'],
   wheelchair: ['wheelchair', 'ada', 'lift', 'ramp'],
   dialysis: ['dialysis'],
-  non_emergency: ['non-emergency', 'nemt', 'medical', 'appointment'],
-  hospital_discharge: ['discharge', 'hospital'],
-  senior_private: ['senior', 'private', 'ambulatory']
+  non_emergency: ['non-emergency medical', 'non-emergency', 'nemt', 'medical transportation'],
+  hospital_discharge: ['hospital discharge', 'discharge', 'hospital'],
+  senior_private: ['senior', 'private-pay', 'ambulatory'],
+  private: ['private transportation', 'private'],
+  school: ['school', 'youth'],
+  stretcher: ['stretcher', 'gurney'],
+  outpatient: ['outpatient', 'surgery', 'dental'],
+  airport: ['airport', 'long-distance', 'sea-tac'],
+  behavioral: ['behavioral health', 'counseling', 'wellness']
 };
 
 function findMatchingService(wixServices, serviceType, requestedServiceId) {

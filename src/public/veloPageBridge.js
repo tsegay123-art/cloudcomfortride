@@ -50,7 +50,7 @@ const ROUTE_ALIASES = {
   '/admin/settings': { urls: ['/admin/settings', '/admin/bookings', '/admin', '/owner-dispatch'], names: ['admin settings', 'admin bookings', 'admin'] }
 };
 
-function resolveWixRoute(requestedPath) {
+export function resolveWixRoute(requestedPath) {
   const clean = String(requestedPath || '/').split('?')[0].replace(/\/+$/, '') || '/';
   try {
     const structure = wixSiteFrontend.getSiteStructure();
@@ -319,7 +319,15 @@ export function wireAllMasterCustomElements(currentPath) {
           session.setItem(SELECTED_SERVICE_KEY, detail.serviceId);
         }
         if (detail.path) {
-          wixLocationFrontend.to(resolveWixRoute(detail.path));
+          let targetUrl = resolveWixRoute(detail.path);
+          if (detail.serviceId && (detail.path === '/book-a-ride' || detail.path === '/book-online')) {
+            const sep = targetUrl.includes('?') ? '&' : '?';
+            const hashIdx = targetUrl.indexOf('#');
+            targetUrl = hashIdx >= 0
+              ? `${targetUrl.slice(0, hashIdx)}${sep}service=${encodeURIComponent(detail.serviceId)}${targetUrl.slice(hashIdx)}`
+              : `${targetUrl}${sep}service=${encodeURIComponent(detail.serviceId)}`;
+          }
+          wixLocationFrontend.to(targetUrl);
         }
       });
     }
@@ -359,7 +367,15 @@ export function wireNavigationElement(selector) {
         session.setItem(SELECTED_SERVICE_KEY, detail.serviceId);
       }
       if (detail.path) {
-        wixLocationFrontend.to(resolveWixRoute(detail.path));
+        let targetUrl = resolveWixRoute(detail.path);
+        if (detail.serviceId && (detail.path === '/book-a-ride' || detail.path === '/book-online')) {
+          const sep = targetUrl.includes('?') ? '&' : '?';
+          const hashIdx = targetUrl.indexOf('#');
+          targetUrl = hashIdx >= 0
+            ? `${targetUrl.slice(0, hashIdx)}${sep}service=${encodeURIComponent(detail.serviceId)}${targetUrl.slice(hashIdx)}`
+            : `${targetUrl}${sep}service=${encodeURIComponent(detail.serviceId)}`;
+        }
+        wixLocationFrontend.to(targetUrl);
       }
     });
   });
@@ -392,11 +408,12 @@ export function wireBookingElement(selector) {
   const targets = resolveAllPageCustomElements(selector);
   if (!targets.length) return;
 
-  const preselected = session.getItem(SELECTED_SERVICE_KEY);
+  const queryService = (wixLocationFrontend.query && wixLocationFrontend.query.service) || '';
+  const preselected = queryService || session.getItem(SELECTED_SERVICE_KEY);
   if (preselected) {
     targets.forEach((el) => {
       if (typeof el.setAttribute === 'function') {
-        el.setAttribute('initial-service', preselected);
+        el.setAttribute('initial-service', String(preselected));
       }
     });
     session.removeItem(SELECTED_SERVICE_KEY);
