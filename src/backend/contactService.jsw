@@ -1,5 +1,5 @@
 import wixData from 'wix-data';
-import { contacts } from 'wix-crm.v2';
+import { contacts } from 'wix-crm-backend';
 import { OWNER_EMAIL, sendWixOrResendNotification } from './notificationService';
 import { verifyAdminAccess } from './authService.jsw';
 
@@ -114,30 +114,45 @@ export async function submitInquiry(payload) {
 
   let crmContactId = '';
   try {
-    if (contacts && contacts.createContact) {
-      const created = await contacts.createContact({
+    if (contacts && contacts.appendOrCreateContact) {
+      const created = await contacts.appendOrCreateContact({
         name: { first: firstName, last: lastName === '-' ? '' : lastName },
-        emails: { items: [{ email }] },
-        phones: phone ? { items: [{ phone }] } : undefined,
-        company: subject
+        emails: [{ email }],
+        phones: phone ? [{ phone }] : []
       });
-      crmContactId = (created && created.contact && created.contact._id) || '';
+      crmContactId = (created && created.contactId) || '';
     }
   } catch (e) {
-    // Non-fatal if contact already exists or CRM API unavailable in preview
+    // Non-fatal if CRM API unavailable in preview
   }
 
   let insertedItem = null;
-  try {
-    insertedItem = await wixData.insert(collectionId, { ...record, crmContactId }, { suppressAuth: true });
-  } catch (err) {
-    console.error(`${collectionId} CMS insert failed:`, err && err.message ? err.message : err);
-    if (!crmContactId) {
-      return {
-        success: false,
-        persistedToCms: false,
-        message: 'Unable to save your message. Please call (206) 327-4411.'
-      };
+  let savedToCol = '';
+  for (const candidate of [collectionId, 'Import1', 'Import 1']) {
+    try {
+      const payloadToSave = (candidate === 'Import1' || candidate === 'Import 1')
+        ? {
+          bookingId: messageReference,
+          bookingReference: messageReference,
+          bookingStatus: 'Contact Inquiry',
+          serviceType: 'contact_inquiry',
+          serviceTitle: subject,
+          passengerFirstName: firstName,
+          passengerLastName: lastName,
+          passengerName: fullName,
+          emailAddress: email,
+          contactPhone: phone,
+          specialInstructions: message,
+          crmContactId,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+        : { ...record, crmContactId, submissionDate: new Date(), createdAt: new Date() };
+      insertedItem = await wixData.insert(candidate, payloadToSave, { suppressAuth: true });
+      savedToCol = candidate;
+      break;
+    } catch (err) {
+      // Try fallback collection
     }
   }
 
@@ -181,23 +196,35 @@ export async function submitInquiry(payload) {
     ? 'SENT'
     : (ownerResult.delivered || customerResult.delivered ? 'PARTIAL' : 'FAILED');
 
-  try {
-    await wixData.update(collectionId, {
-      ...insertedItem,
-      notificationStatus
-    }, { suppressAuth: true });
-  } catch (e) {
-    // Non-fatal
+  if (insertedItem && savedToCol) {
+    try {
+      await wixData.update(savedToCol, {
+        ...insertedItem,
+        notificationStatus
+      }, { suppressAuth: true });
+    } catch (e) {
+      // Non-fatal
+    }
+  }
+
+  if (!insertedItem && !crmContactId && !ownerResult.delivered) {
+    return {
+      success: false,
+      persistedToCms: false,
+      message: 'Unable to save your message right now. Please call (206) 327-4411.'
+    };
   }
 
   return {
     success: true,
-    persistedToCms: true,
+    persistedToCms: Boolean(insertedItem),
+    crmContactId,
     ownerNotified: ownerResult.delivered,
     customerNotified: customerResult.delivered,
     notificationStatus,
     inquiry: {
       ...record,
+      crmContactId,
       notificationStatus
     }
   };

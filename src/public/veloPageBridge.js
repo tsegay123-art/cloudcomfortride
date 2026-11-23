@@ -29,9 +29,9 @@ const ROUTE_ALIASES = {
   '/why-cloud-comfort-ride': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
   '/fleet': { urls: ['/fleet', '/why-cloud-comfort-ride', '/safety-drivers'], names: ['fleet', 'why cloud comfort ride', 'why cloud medical'] },
   '/why-cloud-medical': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
-  '/book-a-ride': { urls: ['/book-online', '/booking-calendar', '/service-page'], names: ['book online', 'booking calendar', 'service page'] },
-  '/book-online': { urls: ['/book-online', '/booking-calendar', '/service-page'], names: ['book online', 'booking calendar', 'service page'] },
-  '/booking-calendar': { urls: ['/booking-calendar', '/book-online'], names: ['booking calendar', 'book online'] },
+  '/book-a-ride': { urls: ['/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
+  '/book-online': { urls: ['/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
+  '/booking-calendar': { urls: ['/book-a-ride', '/book-ride'], names: ['book a ride', 'book ride'] },
   '/my-bookings': { urls: ['/my-booking'], names: ['my booking'] },
   '/my-booking': { urls: ['/my-booking'], names: ['my booking'] },
   '/contact': { urls: ['/contact', '/contact-us'], names: ['contact'] },
@@ -63,18 +63,25 @@ export function resolveWixRoute(requestedPath) {
       return home && home.url ? normUrl(home.url) : '/';
     }
 
-    const exact = pages.find((p) => normUrl(p.url) === clean);
+    const SYSTEM_BOOKING_URLS = ['/book-online', '/booking-form', '/booking-calendar', '/service-page'];
+    const isBookingTarget = clean === '/book-a-ride' || clean === '/book-online' || clean === '/booking-calendar';
+
+    const exact = pages.find((p) => normUrl(p.url) === clean && !(isBookingTarget && SYSTEM_BOOKING_URLS.includes(normUrl(p.url))));
     if (exact && exact.url) return normUrl(exact.url);
 
     const rule = ROUTE_ALIASES[clean];
     if (rule) {
       for (const candidateUrl of rule.urls) {
-        const byAliasUrl = pages.find((p) => normUrl(p.url) === candidateUrl);
+        const byAliasUrl = pages.find((p) => normUrl(p.url) === candidateUrl && !(isBookingTarget && SYSTEM_BOOKING_URLS.includes(normUrl(p.url))));
         if (byAliasUrl && byAliasUrl.url) return normUrl(byAliasUrl.url);
       }
 
       for (const candidateName of rule.names) {
-        const byName = pages.find((p) => String(p.name || '').toLowerCase().includes(candidateName));
+        const byName = pages.find((p) => {
+          const u = normUrl(p.url);
+          if (isBookingTarget && SYSTEM_BOOKING_URLS.includes(u)) return false;
+          return String(p.name || '').toLowerCase().includes(candidateName);
+        });
         if (byName && byName.url) return normUrl(byName.url);
       }
     }
@@ -82,8 +89,10 @@ export function resolveWixRoute(requestedPath) {
     if (clean === '/my-bookings' || clean === '/my-booking') {
       return '/my-booking';
     }
-    if (clean === '/book-a-ride' || clean === '/book-online') {
-      return '/book-online';
+    if (isBookingTarget) {
+      const home = pages.find((p) => p.isHomePage);
+      const homeUrl = home && home.url ? normUrl(home.url) : '/';
+      return `${homeUrl}?book=1#request`;
     }
   } catch (e) {
     // Fallback to requested path if site structure is unavailable
