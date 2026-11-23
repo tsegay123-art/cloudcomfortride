@@ -207,7 +207,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                   <button data-nav="/safety-drivers">Fleet &amp; Safety Standards</button>
                   <button data-nav="/about">About Our Company</button>
                   <button data-nav="/book-a-ride">Book A Ride</button>
-                  <button data-nav="/my-bookings">My Bookings &amp; Trip Vouchers</button>
+                  <button data-nav="/my-booking">My Bookings &amp; Trip Vouchers</button>
                   <button data-nav="/contact">Contact &amp; Dispatch Support</button>
                 </div>
               </div>

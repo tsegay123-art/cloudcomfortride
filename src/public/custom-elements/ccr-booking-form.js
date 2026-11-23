@@ -287,7 +287,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           this.render();
         });
         this.shadowRoot.getElementById('view-my-bookings').addEventListener('click', () => {
-          dispatchCcrNavigation(this, '/my-bookings');
+          dispatchCcrNavigation(this, '/my-booking');
         });
         this.shadowRoot.getElementById('new-booking').addEventListener('click', () => {
           this._completedBooking = null;

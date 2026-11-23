@@ -32,8 +32,8 @@ const ROUTE_ALIASES = {
   '/why-cloud-medical': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
   '/book-a-ride': { urls: ['/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
   '/book-online': { urls: ['/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
-  '/my-bookings': { urls: ['/my-booking', '/my-bookings'], names: ['my booking', 'my bookings'] },
-  '/my-booking': { urls: ['/my-booking', '/my-bookings'], names: ['my booking', 'my bookings'] },
+  '/my-bookings': { urls: ['/my-booking'], names: ['my booking'] },
+  '/my-booking': { urls: ['/my-booking'], names: ['my booking'] },
   '/contact': { urls: ['/contact', '/contact-us'], names: ['contact'] },
   '/privacy': { urls: ['/privacy', '/privacy-policy'], names: ['privacy policy', 'privacy'] },
   '/terms': { urls: ['/terms', '/terms-of-service'], names: ['terms of service', 'terms'] },
@@ -64,7 +64,7 @@ export function resolveWixRoute(requestedPath) {
     }
 
     const SYSTEM_BOOKING_URLS = ['/book-online', '/booking-form', '/booking-calendar', '/service-page'];
-    const SYSTEM_MEMBER_BOOKING_URLS = ['/account/my-bookings'];
+    const SYSTEM_MEMBER_BOOKING_URLS = ['/account/my-bookings', '/my-bookings'];
     const isBookingTarget = clean === '/book-a-ride' || clean === '/book-online';
     const isMyBookingsTarget = clean === '/my-bookings' || clean === '/my-booking';
 
@@ -100,6 +100,9 @@ export function resolveWixRoute(requestedPath) {
       }
     }
 
+    if (clean === '/my-bookings' || clean === '/my-booking') {
+      return '/my-booking';
+    }
     if (clean === '/book-a-ride' || clean === '/book-online') {
       const home = pages.find((p) => p.isHomePage);
       const homeUrl = home && home.url ? normUrl(home.url) : '/';
@@ -112,7 +115,7 @@ export function resolveWixRoute(requestedPath) {
 }
 
 function buildRouteMap() {
-  const keys = ['/', '/services', '/about', '/safety-drivers', '/fleet', '/book-a-ride', '/my-bookings', '/contact', '/privacy', '/terms', '/accessibility', '/owner-dispatch'];
+  const keys = ['/', '/services', '/about', '/safety-drivers', '/fleet', '/book-a-ride', '/my-booking', '/my-bookings', '/contact', '/privacy', '/terms', '/accessibility', '/owner-dispatch', '/admin/bookings'];
   const map = {};
   keys.forEach((k) => {
     map[k] = resolveWixRoute(k);

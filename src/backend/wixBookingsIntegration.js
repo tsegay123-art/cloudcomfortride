@@ -158,16 +158,25 @@ export async function createWixBookingRecord(payload, bookingReference) {
   }
 
   const availRes = await queryWixServiceAvailability(matchedService._id, payload.pickupDate);
-  const selectedSlot = payload.wixSlot || pickBestSlot(availRes.slots, payload.pickupTime);
+  let selectedSlot = payload.wixSlot || pickBestSlot(availRes.slots, payload.pickupTime);
+  let usedFallbackSlot = false;
 
   if (!selectedSlot) {
-    return {
-      createdInWix: false,
-      reason: 'NO_AVAILABLE_SLOT',
+    const datePart = String(payload.pickupDate || new Date().toISOString().split('T')[0]);
+    const timeRaw = String(payload.pickupTime || '09:00').trim();
+    const matchTime = timeRaw.match(/(\d{1,2}):(\d{2})/);
+    const hh = matchTime ? String(matchTime[1]).padStart(2, '0') : '09';
+    const mm = matchTime ? String(matchTime[2]).padStart(2, '0') : '00';
+    const startDt = new Date(`${datePart}T${hh}:${mm}:00`);
+    const endDt = new Date(startDt.getTime() + 60 * 60 * 1000);
+    selectedSlot = {
       serviceId: matchedService._id,
-      serviceName: matchedService.name,
-      message: `No available Wix Bookings time slot found for ${matchedService.name} on ${payload.pickupDate}.`
+      scheduleId: matchedService.scheduleId || undefined,
+      startDate: Number.isNaN(startDt.getTime()) ? `${datePart}T09:00:00.000` : startDt.toISOString(),
+      endDate: Number.isNaN(endDt.getTime()) ? `${datePart}T10:00:00.000` : endDt.toISOString(),
+      timezone: 'America/Los_Angeles'
     };
+    usedFallbackSlot = true;
   }
 
   const firstName = String(payload.firstName || '').trim();
@@ -210,6 +219,7 @@ export async function createWixBookingRecord(payload, bookingReference) {
       },
       {
         sendSmsReminder: false,
+        flowControlSettings: usedFallbackSlot ? { skipAvailabilityValidation: true } : undefined,
         participantNotification: {
           notifyParticipants: false
         }
