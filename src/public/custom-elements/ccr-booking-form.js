@@ -24,6 +24,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         pickupTime: '09:00',
         returnTime: '11:30',
         pickupAddress: '',
+        pickupCity: 'Seattle',
+        pickupState: 'WA',
+        pickupZip: '',
         pickupLat: null,
         pickupLng: null,
         pickupPlaceId: '',
@@ -31,6 +34,8 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         pickupNotes: '',
         facilityName: '',
         destinationAddress: '',
+        destinationCity: 'Seattle',
+        destinationZip: '',
         destinationLat: null,
         destinationLng: null,
         destinationPlaceId: '',
@@ -140,9 +145,14 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         pickupTime: val('pickupTime'),
         returnTime: val('returnTime'),
         pickupAddress: val('pickupAddress'),
+        pickupCity: val('pickupCity') || 'Seattle',
+        pickupState: val('pickupState') || 'WA',
+        pickupZip: val('pickupZip'),
         pickupNotes: val('pickupNotes'),
         facilityName: val('facilityName'),
         destinationAddress: val('destinationAddress'),
+        destinationCity: val('destinationCity') || 'Seattle',
+        destinationZip: val('destinationZip'),
         destinationNotes: val('destinationNotes'),
         firstName: val('firstName'),
         lastName: val('lastName'),
@@ -565,6 +575,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               </div>
             ` : ''}
           </div>
+          <p style="font-size:14px;color:var(--muted);margin-top:8px;">
+            Note: Submitted dates and times are requests (<strong>PENDING REVIEW</strong>) and are not confirmed until verified by Seattle dispatch.
+          </p>
 
           <div class="section-head"><span class="step-num">2</span> Pickup &amp; Destination</div>
           <div class="grid-2">
@@ -579,8 +592,22 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               ${fieldErr('pickupAddress')}
             </div>
             <div>
-              <label for="pickupNotes">Pickup Gate / Door Notes</label>
+              <label for="pickupNotes">Apt / Unit / Gate / Access Notes</label>
               <input type="text" id="pickupNotes" placeholder="Apt #, buzzer code, front/side entrance" value="${s.pickupNotes}" />
+            </div>
+          </div>
+          <div class="grid-3" style="margin-top:12px;">
+            <div>
+              <label for="pickupCity">Pickup City</label>
+              <input type="text" id="pickupCity" placeholder="Seattle" value="${s.pickupCity}" />
+            </div>
+            <div>
+              <label for="pickupState">State</label>
+              <input type="text" id="pickupState" placeholder="WA" value="${s.pickupState}" maxlength="2" />
+            </div>
+            <div>
+              <label for="pickupZip">ZIP Code</label>
+              <input type="text" id="pickupZip" placeholder="98122" value="${s.pickupZip}" maxlength="10" />
             </div>
           </div>
 
@@ -600,8 +627,18 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               ${fieldErr('destinationAddress')}
             </div>
             <div>
-              <label for="destinationNotes">Department / Suite</label>
+              <label for="destinationNotes">Department / Suite / Entrance</label>
               <input type="text" id="destinationNotes" placeholder="e.g., Dialysis Unit, 3rd Floor" value="${s.destinationNotes}" />
+            </div>
+          </div>
+          <div class="grid-2" style="margin-top:12px;">
+            <div>
+              <label for="destinationCity">Destination City</label>
+              <input type="text" id="destinationCity" placeholder="Seattle" value="${s.destinationCity}" />
+            </div>
+            <div>
+              <label for="destinationZip">Destination ZIP Code</label>
+              <input type="text" id="destinationZip" placeholder="98104" value="${s.destinationZip}" maxlength="10" />
             </div>
           </div>
           <div class="quick-facilities">
@@ -688,7 +725,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
           <div class="submit-bar">
             <button type="submit" class="dt-button" style="width:100%;font-size:18px;padding:16px 26px;min-height:58px;" ${this._isSubmitting ? 'disabled' : ''}>
-              ${this._isSubmitting ? 'Submitting to Seattle Dispatch...' : '📅 Request Ride Confirmation →'}
+              ${this._isSubmitting ? 'Submitting to Seattle Dispatch...' : '📅 Book Medical Ride →'}
             </button>
             <p style="text-align:center;font-size:16px;color:var(--muted);">
               Need immediate same-day dispatch? Call <strong><a href="tel:${COMPANY_INFO.phoneRaw}">${COMPANY_INFO.phoneDisplay}</a></strong>

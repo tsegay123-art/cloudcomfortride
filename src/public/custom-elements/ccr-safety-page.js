@@ -169,7 +169,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         </section>
       `;
 
-      this.shadowRoot.getElementById('book-safety').addEventListener('click', () => this._navigate('/booking-calendar'));
+      this.shadowRoot.getElementById('book-safety').addEventListener('click', () => this._navigate('/book-a-ride'));
       initScrollReveals(this.shadowRoot);
     }
   }

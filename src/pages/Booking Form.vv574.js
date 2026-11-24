@@ -1,6 +1,6 @@
-// API Reference: https://www.wix.com/velo/reference/api-overview/introduction
-// “Hello, World!” Example: https://learn-code.wix.com/en/article/hello-world
+import wixLocationFrontend from 'wix-location-frontend';
+import { resolveWixRoute } from 'public/veloPageBridge';
 
 $w.onReady(function () {
-    // Official Wix Bookings Form page
+  wixLocationFrontend.to(resolveWixRoute('/book-a-ride'));
 });

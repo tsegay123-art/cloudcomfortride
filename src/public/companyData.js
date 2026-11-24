@@ -77,7 +77,8 @@ export const BOOKING_SERVICE_OPTIONS = [
   { value: 'beauty_salon', label: 'Beauty Salon' },
   { value: 'door_to_door', label: 'Door-to-Door Pickup' },
   { value: 'family_events', label: 'Family Events' },
-  { value: 'mobility_assistance', label: 'Cane, Walker, Wheelchair & Mobility Assistance' }
+  { value: 'mobility_assistance', label: 'Cane, Walker, Wheelchair & Mobility Assistance' },
+  { value: 'other', label: 'Other transportation requests' }
 ];
 
 export function getServiceTitle(type) {
