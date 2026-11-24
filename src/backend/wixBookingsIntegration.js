@@ -200,24 +200,7 @@ export async function createWixBookingRecord(payload, bookingReference) {
           email,
           phone
         },
-        totalParticipants: 1 + companions,
-        additionalFields: [
-          {
-            _id: 'bookingReference',
-            label: 'Booking Reference',
-            value: bookingReference
-          },
-          {
-            _id: 'pickupAddress',
-            label: 'Pickup Address',
-            value: String(payload.pickupAddress || '')
-          },
-          {
-            _id: 'destinationAddress',
-            label: 'Destination Address',
-            value: String(payload.destinationAddress || '')
-          }
-        ]
+        totalParticipants: 1 + companions
       },
       {
         sendSmsReminder: false,

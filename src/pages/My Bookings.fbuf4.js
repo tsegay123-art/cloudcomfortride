@@ -1,6 +1,13 @@
-// API Reference: https://www.wix.com/velo/reference/api-overview/introduction
-// “Hello, World!” Example: https://learn-code.wix.com/en/article/hello-world
+import wixLocationFrontend from 'wix-location-frontend';
+import { resolveWixRoute } from 'public/veloPageBridge';
 
 $w.onReady(function () {
-    // Official Wix Members Area My Bookings page
+  ['#myBookings1', '#bookings1', '#page1'].forEach((id) => {
+    try {
+      const el = $w(id);
+      if (el && typeof el.collapse === 'function') el.collapse();
+      if (el && typeof el.hide === 'function') el.hide();
+    } catch (e) {}
+  });
+  wixLocationFrontend.to(resolveWixRoute('/my-booking'));
 });
