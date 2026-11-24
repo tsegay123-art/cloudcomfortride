@@ -10,6 +10,10 @@ async function getOptionalSecret(key) {
   }
 }
 
+function normalizeFormId(raw) {
+  return String(raw || '').trim().replace(/^WixForms\//i, '');
+}
+
 /**
  * Submit booking intake payload to the existing Wix Forms & Submissions "Booking Form".
  * @param {Record<string, any>} payload
@@ -18,7 +22,7 @@ async function getOptionalSecret(key) {
  * @returns {Promise<Record<string, any>>}
  */
 export async function submitBookingToWixForms(payload, bookingReference, wixBookingId = '') {
-  const formId = await getOptionalSecret('CCR_BOOKING_FORM_ID');
+  const formId = normalizeFormId(await getOptionalSecret('CCR_BOOKING_FORM_ID'));
   if (!formId) {
     return {
       submitted: false,
@@ -72,7 +76,7 @@ export async function submitBookingToWixForms(payload, bookingReference, wixBook
  * @returns {Promise<Record<string, any>>}
  */
 export async function submitContactToWixForms(record) {
-  const formId = await getOptionalSecret('CCR_CONTACT_FORM_ID');
+  const formId = normalizeFormId(await getOptionalSecret('CCR_CONTACT_FORM_ID'));
   if (!formId) {
     return {
       submitted: false,
