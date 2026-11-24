@@ -1,4 +1,5 @@
 import wixData from 'wix-data';
+import { contacts } from 'wix-crm-backend';
 import { COMPANY_INFO, getServiceTitle } from 'public/companyData';
 import { sendWixOrResendNotification } from './notificationService';
 import { verifyAdminAccess, recordAdminAudit, ROLES } from './authService.jsw';
@@ -241,24 +242,31 @@ export async function submitBooking(payload) {
   const hasCompanion = Boolean(payload.hasCompanion ?? payload.companionRequired);
   const companionCount = hasCompanion ? Number(payload.companionCount || 1) : 0;
 
-  // Attempt real Wix Bookings V2 creation so booking appears in Wix Dashboard Calendar & Booking Requests
+  // Submit to Wix Bookings V2 (if services configured) AND Wix Forms "Booking Form" (CCR_BOOKING_FORM_ID)
   const wixRes = await createWixBookingRecord(payload, bookingId);
   const wixFormRes = await submitBookingToWixForms(payload, bookingId, wixRes.wixBookingId || '');
 
-  // If Wix Bookings services exist on the site, do not report a confirmed booking when Wix booking creation failed
   if (!wixRes.createdInWix && wixRes.reason !== 'NO_WIX_SERVICES_CONFIGURED') {
     await recordAdminAudit(
       'system',
-      'WIX_BOOKING_CREATION_FAILED',
+      'WIX_BOOKING_SYNC_NOTE',
       bookingId,
-      `${wixRes.reason || 'ERROR'}: ${wixRes.message || ''} | FormSub: ${wixFormRes.submissionId || 'none'}`
+      `${wixRes.reason || 'NOTE'}: ${wixRes.message || ''} | FormSub: ${wixFormRes.submissionId || 'none'}`
     );
-    return {
-      success: false,
-      persistedToCms: false,
-      wixFormSubmissionId: wixFormRes.submissionId || '',
-      message: wixRes.message || 'The selected date/time is not available in Wix Bookings. Please choose another time or call (206) 327-4411.'
-    };
+  }
+
+  let crmContactId = '';
+  try {
+    if (contacts && contacts.appendOrCreateContact) {
+      const crmRes = await contacts.appendOrCreateContact({
+        name: { first: firstName, last: lastName },
+        emails: [{ email }],
+        phones: phone ? [{ phone }] : []
+      });
+      crmContactId = (crmRes && crmRes.contactId) || '';
+    }
+  } catch (e) {
+    // Non-fatal CRM upsert error
   }
 
   const record = {
@@ -266,9 +274,10 @@ export async function submitBooking(payload) {
     bookingReference: bookingId,
     wixBookingId: wixRes.wixBookingId || '',
     wixRevision: wixRes.wixRevision || '',
-    wixStatus: wixRes.wixStatus || (wixRes.createdInWix ? 'PENDING' : 'CMS_ONLY'),
+    wixStatus: wixRes.wixStatus || (wixRes.createdInWix ? 'PENDING' : 'WIX_FORM_SAVED'),
     wixServiceId: wixRes.wixServiceId || '',
     wixFormSubmissionId: wixFormRes.submissionId || '',
+    crmContactId,
     pickupLat: payload.pickupLat || null,
     pickupLng: payload.pickupLng || null,
     pickupPlaceId: String(payload.pickupPlaceId || ''),

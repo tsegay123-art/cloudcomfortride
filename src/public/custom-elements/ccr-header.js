@@ -104,8 +104,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         { label: 'About Us', path: '/about', aliases: ['/about', '/about-us'] },
         { label: 'Why Cloud Comfort Ride', path: '/safety-drivers', aliases: ['/safety-drivers', '/why-cloud-comfort-ride', '/why-cloud-medical'] },
         { label: 'Fleet', path: '/fleet', aliases: ['/fleet'] },
-        { label: 'Contact Us', path: '/contact', aliases: ['/contact', '/contact-us'] },
-        { label: 'My Bookings', path: '/my-booking', aliases: ['/my-bookings', '/my-booking', '/account/my-bookings'] }
+        { label: 'Contact Us', path: '/contact', aliases: ['/contact', '/contact-us'] }
       ];
       const isLinkActive = (link) => link.aliases.includes(currentPath);
 
