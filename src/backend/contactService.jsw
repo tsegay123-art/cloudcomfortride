@@ -2,6 +2,7 @@ import wixData from 'wix-data';
 import { contacts } from 'wix-crm-backend';
 import { OWNER_EMAIL, sendWixOrResendNotification } from './notificationService';
 import { verifyAdminAccess } from './authService.jsw';
+import { submitContactToWixForms } from './wixFormsIntegration';
 
 const CONTACT_COLLECTION_CANDIDATES = ['ContactSubmissions', 'ContactMessages'];
 let resolvedContactCollection = null;
@@ -112,6 +113,8 @@ export async function submitInquiry(payload) {
     notificationStatus: 'PENDING'
   };
 
+  const wixFormRes = await submitContactToWixForms(record);
+
   let crmContactId = '';
   try {
     if (contacts && contacts.appendOrCreateContact) {
@@ -207,7 +210,7 @@ export async function submitInquiry(payload) {
     }
   }
 
-  if (!insertedItem && !crmContactId && !ownerResult.delivered) {
+  if (!insertedItem && !crmContactId && !wixFormRes.submitted && !ownerResult.delivered) {
     return {
       success: false,
       persistedToCms: false,
@@ -218,12 +221,14 @@ export async function submitInquiry(payload) {
   return {
     success: true,
     persistedToCms: Boolean(insertedItem),
+    wixFormSubmissionId: wixFormRes.submissionId || '',
     crmContactId,
     ownerNotified: ownerResult.delivered,
     customerNotified: customerResult.delivered,
     notificationStatus,
     inquiry: {
       ...record,
+      wixFormSubmissionId: wixFormRes.submissionId || '',
       crmContactId,
       notificationStatus
     }

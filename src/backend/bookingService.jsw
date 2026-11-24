@@ -17,6 +17,7 @@ import {
   listDrivers,
   listVehicles
 } from './rideOperationsService';
+import { submitBookingToWixForms } from './wixFormsIntegration';
 
 const CANDIDATE_BOOKING_COLLECTIONS = ['Import1', 'Import_1', 'Import 1', 'Bookings'];
 let cachedCollectionId = '';
@@ -242,6 +243,23 @@ export async function submitBooking(payload) {
 
   // Attempt real Wix Bookings V2 creation so booking appears in Wix Dashboard Calendar & Booking Requests
   const wixRes = await createWixBookingRecord(payload, bookingId);
+  const wixFormRes = await submitBookingToWixForms(payload, bookingId, wixRes.wixBookingId || '');
+
+  // If Wix Bookings services exist on the site, do not report a confirmed booking when Wix booking creation failed
+  if (!wixRes.createdInWix && wixRes.reason !== 'NO_WIX_SERVICES_CONFIGURED') {
+    await recordAdminAudit(
+      'system',
+      'WIX_BOOKING_CREATION_FAILED',
+      bookingId,
+      `${wixRes.reason || 'ERROR'}: ${wixRes.message || ''} | FormSub: ${wixFormRes.submissionId || 'none'}`
+    );
+    return {
+      success: false,
+      persistedToCms: false,
+      wixFormSubmissionId: wixFormRes.submissionId || '',
+      message: wixRes.message || 'The selected date/time is not available in Wix Bookings. Please choose another time or call (206) 327-4411.'
+    };
+  }
 
   const record = {
     bookingId,
@@ -250,6 +268,14 @@ export async function submitBooking(payload) {
     wixRevision: wixRes.wixRevision || '',
     wixStatus: wixRes.wixStatus || (wixRes.createdInWix ? 'PENDING' : 'CMS_ONLY'),
     wixServiceId: wixRes.wixServiceId || '',
+    wixFormSubmissionId: wixFormRes.submissionId || '',
+    pickupLat: payload.pickupLat || null,
+    pickupLng: payload.pickupLng || null,
+    pickupPlaceId: String(payload.pickupPlaceId || ''),
+    destinationLat: payload.destinationLat || null,
+    destinationLng: payload.destinationLng || null,
+    destinationPlaceId: String(payload.destinationPlaceId || ''),
+    needsBoardingAssistance: Boolean(payload.needsBoardingAssistance),
     createdAt: nowDate,
     updatedAt: nowDate,
     bookingStatus: 'Pending',

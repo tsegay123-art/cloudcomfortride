@@ -73,9 +73,9 @@ export const BOOKING_SERVICE_OPTIONS = [
   { value: 'senior_private_pay', label: 'Senior & private-pay rides' },
   { value: 'private_transport', label: 'Private transportation' },
   { value: 'airport_services', label: 'Airport Services' },
-  { value: 'veterans', label: 'Veterans Transportation' },
+  { value: 'veterans', label: 'Veterans' },
   { value: 'beauty_salon', label: 'Beauty Salon' },
-  { value: 'door_to_door', label: 'Door to Door Pick up' },
+  { value: 'door_to_door', label: 'Door-to-Door Pickup' },
   { value: 'family_events', label: 'Family Events' },
   { value: 'mobility_assistance', label: 'Cane, Walker, Wheelchair & Mobility Assistance' }
 ];

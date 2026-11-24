@@ -24,9 +24,17 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         pickupTime: '09:00',
         returnTime: '11:30',
         pickupAddress: '',
+        pickupLat: null,
+        pickupLng: null,
+        pickupPlaceId: '',
+        pickupConfirmed: false,
         pickupNotes: '',
         facilityName: '',
         destinationAddress: '',
+        destinationLat: null,
+        destinationLng: null,
+        destinationPlaceId: '',
+        destinationConfirmed: false,
         destinationNotes: '',
         firstName: '',
         lastName: '',
@@ -36,6 +44,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         hasCompanion: false,
         companionCount: 1,
         hasStairs: false,
+        needsBoardingAssistance: false,
         specialInstructions: ''
       };
       this._errors = {};
@@ -143,6 +152,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         hasCompanion: checked('hasCompanion'),
         companionCount: Number(val('companionCount') || 1),
         hasStairs: checked('hasStairs'),
+        needsBoardingAssistance: checked('needsBoardingAssistance'),
         specialInstructions: val('specialInstructions'),
         website: val('b-website')
       };
@@ -562,6 +572,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               <label for="pickupAddress">Pickup Street Address *</label>
               <input type="text" id="pickupAddress" autocomplete="off" placeholder="e.g., 1902 E Yesler Way, Seattle, WA" value="${s.pickupAddress}" />
               <div class="ac-list" id="pickup-ac" role="listbox" aria-label="Pickup address suggestions"></div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+                <button type="button" class="fac-chip" id="gps-pickup-btn">📍 Use My Current Location</button>
+                <button type="button" class="fac-chip" id="confirm-pickup-btn">${s.pickupConfirmed ? '✓ Pickup Confirmed' : 'Confirm Pickup Pin'}</button>
+              </div>
               ${fieldErr('pickupAddress')}
             </div>
             <div>
@@ -579,6 +593,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               <label for="destinationAddress">Destination Address *</label>
               <input type="text" id="destinationAddress" autocomplete="off" placeholder="Clinic street address" value="${s.destinationAddress}" />
               <div class="ac-list" id="dest-ac" role="listbox" aria-label="Destination address suggestions"></div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+                <button type="button" class="fac-chip" id="gps-dest-btn">📍 Use Current Location</button>
+                <button type="button" class="fac-chip" id="confirm-dest-btn">${s.destinationConfirmed ? '✓ Destination Confirmed' : 'Confirm Destination Pin'}</button>
+              </div>
               ${fieldErr('destinationAddress')}
             </div>
             <div>
@@ -636,6 +654,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                 <option value="wheelchair_standard" ${s.mobilityNeed === 'wheelchair_standard' ? 'selected' : ''}>Manual Wheelchair (ADA Lift / Ramp)</option>
                 <option value="wheelchair_motorized" ${s.mobilityNeed === 'wheelchair_motorized' ? 'selected' : ''}>Motorized / Power Wheelchair</option>
                 <option value="walker" ${s.mobilityNeed === 'walker' ? 'selected' : ''}>Walker / Rollator Assistance</option>
+                <option value="door_through_door" ${s.mobilityNeed === 'door_through_door' ? 'selected' : ''}>Door-Through-Door Assistance</option>
                 <option value="bedside_transfer" ${s.mobilityNeed === 'bedside_transfer' ? 'selected' : ''}>Bedside / Hospital Discharge Escort</option>
               </select>
             </div>
@@ -647,6 +666,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               <label class="check-row">
                 <input type="checkbox" id="hasStairs" ${s.hasStairs ? 'checked' : ''} />
                 <span>Stairs or Steps at Pickup / Drop-off</span>
+              </label>
+              <label class="check-row">
+                <input type="checkbox" id="needsBoardingAssistance" ${s.needsBoardingAssistance ? 'checked' : ''} />
+                <span>Additional Boarding Assistance Required</span>
               </label>
             </div>
           </div>
@@ -739,6 +762,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               inputEl.value = chosen.address;
               if (isDest) {
                 this._state.destinationAddress = chosen.address;
+                if (chosen.lat) this._state.destinationLat = chosen.lat;
+                if (chosen.lng) this._state.destinationLng = chosen.lng;
+                if (chosen.placeId) this._state.destinationPlaceId = chosen.placeId;
                 const facEl = /** @type {HTMLInputElement | null} */ (this.shadowRoot.getElementById('facilityName'));
                 if (facEl && chosen.isFacility !== false) {
                   facEl.value = chosen.name;
@@ -746,6 +772,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                 }
               } else {
                 this._state.pickupAddress = chosen.address;
+                if (chosen.lat) this._state.pickupLat = chosen.lat;
+                if (chosen.lng) this._state.pickupLng = chosen.lng;
+                if (chosen.placeId) this._state.pickupPlaceId = chosen.placeId;
               }
               listEl.classList.remove('open');
               updateMapFrame();
@@ -772,6 +801,9 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                 const remoteItems = rows.map((r) => ({
                   name: (r.display_name || '').split(',')[0] || 'Seattle Location',
                   address: r.display_name,
+                  lat: r.lat ? Number(r.lat) : null,
+                  lng: r.lon ? Number(r.lon) : null,
+                  placeId: r.place_id ? String(r.place_id) : '',
                   isFacility: false
                 }));
                 renderOptions([...localMatches.slice(0, 3), ...remoteItems]);
@@ -791,6 +823,65 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
 
       bindAutocomplete('pickupAddress', 'pickup-ac', SEATTLE_PICKUP_AREAS, false);
       bindAutocomplete('destinationAddress', 'dest-ac', SEATTLE_MEDICAL_CENTERS, true);
+
+      const useGpsLocation = (isDest) => {
+        if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            let resolvedAddress = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            try {
+              const rev = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+              if (rev.ok) {
+                const json = await rev.json();
+                if (json && json.display_name) resolvedAddress = json.display_name;
+              }
+            } catch (e) {
+              // Coordinate fallback already set
+            }
+            this._collectValues();
+            if (isDest) {
+              this._state.destinationAddress = resolvedAddress;
+              this._state.destinationLat = lat;
+              this._state.destinationLng = lng;
+              this._state.destinationConfirmed = true;
+            } else {
+              this._state.pickupAddress = resolvedAddress;
+              this._state.pickupLat = lat;
+              this._state.pickupLng = lng;
+              this._state.pickupConfirmed = true;
+            }
+            this.render();
+          },
+          () => {
+            this._errors = { ...this._errors, [isDest ? 'destinationAddress' : 'pickupAddress']: 'Location permission denied. Please type your address.' };
+            this.render();
+          },
+          { enableHighAccuracy: true, timeout: 8000 }
+        );
+      };
+
+      const gpsPickupBtn = this.shadowRoot.getElementById('gps-pickup-btn');
+      if (gpsPickupBtn) gpsPickupBtn.addEventListener('click', () => useGpsLocation(false));
+      const gpsDestBtn = this.shadowRoot.getElementById('gps-dest-btn');
+      if (gpsDestBtn) gpsDestBtn.addEventListener('click', () => useGpsLocation(true));
+      const confirmPickupBtn = this.shadowRoot.getElementById('confirm-pickup-btn');
+      if (confirmPickupBtn) {
+        confirmPickupBtn.addEventListener('click', () => {
+          this._collectValues();
+          this._state.pickupConfirmed = Boolean(this._state.pickupAddress);
+          this.render();
+        });
+      }
+      const confirmDestBtn = this.shadowRoot.getElementById('confirm-dest-btn');
+      if (confirmDestBtn) {
+        confirmDestBtn.addEventListener('click', () => {
+          this._collectValues();
+          this._state.destinationConfirmed = Boolean(this._state.destinationAddress);
+          this.render();
+        });
+      }
       const routeBtn = this.shadowRoot.getElementById('preview-route-map');
       if (routeBtn) {
         routeBtn.addEventListener('click', () => {
