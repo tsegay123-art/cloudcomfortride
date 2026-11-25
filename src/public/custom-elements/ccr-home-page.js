@@ -1,6 +1,5 @@
 import { COMPANY_INFO, IMAGES, TESTIMONIALS } from '../companyData';
 import { CCR_SHARED_CSS, dispatchCcrNavigation, ensureGoogleFonts, initScrollReveals, syncThemeHost } from './ccr-styles';
-import './ccr-booking-form';
 
 if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined') {
   class CcrHomePage extends HTMLElement {
@@ -61,23 +60,6 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
     }
 
     _navigate(path, serviceId = '') {
-      let routeMap = {};
-      try {
-        const rawMap = this.getAttribute('route-map');
-        if (rawMap) routeMap = JSON.parse(rawMap);
-      } catch (e) {
-        routeMap = {};
-      }
-      const mapped = routeMap[path] || path;
-      if ((path === '/book-a-ride' || path === '/book-online' || path === '/booking-calendar') && mapped.includes('#request')) {
-        if (serviceId) {
-          const form = this.shadowRoot && this.shadowRoot.getElementById('home-booking-form');
-          if (form) form.setAttribute('initial-service', serviceId);
-        }
-        const req = this.shadowRoot && this.shadowRoot.getElementById('request');
-        if (req) req.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        return;
-      }
       dispatchCcrNavigation(this, path, serviceId);
     }
 
@@ -682,18 +664,6 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
                 </iframe>
               </div>
             </div>
-          </div>
-        </section>
-
-        <!-- INLINE CUSTOM BOOKING FORM -->
-        <section class="sec-alt" id="request">
-          <div class="container" style="max-width:1060px;">
-            <div class="sec-head">
-              <span class="eyebrow"><span class="eyebrow-dot"></span> Let’s plan your trip</span>
-              <h2>Book A <span style="color:var(--gold-accent);">Ride</span></h2>
-              <p>Complete our custom medical transportation request form below. All requests are initially <strong>PENDING REVIEW</strong> until confirmed by Seattle dispatch.</p>
-            </div>
-            <ccr-booking-form id="home-booking-form"></ccr-booking-form>
           </div>
         </section>
 

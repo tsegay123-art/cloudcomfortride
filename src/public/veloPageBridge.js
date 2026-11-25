@@ -92,9 +92,7 @@ export function resolveWixRoute(requestedPath) {
       return '/my-booking';
     }
     if (isBookingTarget) {
-      const home = pages.find((p) => p.isHomePage);
-      const homeUrl = home && home.url ? normUrl(home.url) : '/';
-      return `${homeUrl}?book=1#request`;
+      return '/book-a-ride';
     }
   } catch (e) {
     // Fallback to requested path if site structure is unavailable
