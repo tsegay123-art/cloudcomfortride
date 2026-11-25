@@ -12,6 +12,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       super();
       this.attachShadow({ mode: 'open' });
       this._search = '';
+      this._verifier = '';
       this._tab = 'upcoming';
       this._hasSearched = false;
       this._loading = false;
@@ -170,9 +171,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         <section style="background:var(--surface-alt);padding:44px 0;min-height:480px;">
           <div class="container" style="max-width:960px;">
             <div class="toolbar">
-              <input class="search-input" id="search-box" type="text" placeholder="Search by Booking Reference (e.g. CCR-2026-7685), Email, or Phone Number" value="${this._search}" />
+              <input class="search-input" id="search-box" type="text" placeholder="Booking Reference (e.g. CCR-2026-6306)" value="${this._search}" />
+              <input class="search-input" id="verifier-box" type="text" placeholder="Your Email or Phone (to verify ownership)" value="${this._verifier}" />
               <button class="dt-button-outline" id="search-dispatch-btn" style="min-height:48px;" ${this._loading ? 'disabled' : ''}>
-                ${this._loading ? 'Searching...' : '🔍 Find Booking'}
+                ${this._loading ? 'Verifying...' : '🔍 Verify &amp; Find'}
               </button>
               <button class="dt-button" id="new-ride-btn">+ Book Another Ride</button>
             </div>
@@ -252,12 +254,13 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
       `;
 
       const searchBox = this.shadowRoot.getElementById('search-box');
+      const verifierBox = this.shadowRoot.getElementById('verifier-box');
       const triggerLookup = () => {
         this._lookupError = '';
         this._loading = true;
         this.render();
         this.dispatchEvent(new CustomEvent('lookupBooking', {
-          detail: { query: this._search },
+          detail: { bookingReference: this._search, verifier: this._verifier },
           bubbles: true,
           composed: true
         }));
@@ -268,6 +271,15 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           this._search = target ? target.value : '';
         });
         searchBox.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') triggerLookup();
+        });
+      }
+      if (verifierBox) {
+        verifierBox.addEventListener('input', (e) => {
+          const target = /** @type {HTMLInputElement | null} */ (e.target);
+          this._verifier = target ? target.value : '';
+        });
+        verifierBox.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') triggerLookup();
         });
       }
@@ -293,7 +305,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           this._loading = true;
           this.render();
           this.dispatchEvent(new CustomEvent('cancelMyBooking', {
-            detail: { bookingId: id, verifier: this._search },
+            detail: { bookingId: id, verifier: this._verifier || this._search },
             bubbles: true,
             composed: true
           }));

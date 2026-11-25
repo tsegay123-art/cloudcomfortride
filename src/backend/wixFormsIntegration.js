@@ -40,25 +40,34 @@ export async function submitBookingToWixForms(payload, bookingReference, wixBook
         first_name: String(payload.firstName || '').trim(),
         last_name: String(payload.lastName || '').trim(),
         email: String(payload.email || '').trim().toLowerCase(),
+        country_code: String(payload.countryCode || '+1'),
         phone: String(payload.phone || '').trim(),
+        passenger_count: Number(payload.passengerCount || 1),
         service_type: String(payload.serviceType || ''),
         trip_type: String(payload.tripType || 'round_trip'),
         pickup_date: String(payload.pickupDate || ''),
         pickup_time: String(payload.pickupTime || ''),
         return_time: String(payload.returnTime || ''),
         pickup_address: String(payload.pickupAddress || '').trim(),
+        pickup_city: String(payload.pickupCity || '').trim(),
+        pickup_zip: String(payload.pickupZip || '').trim(),
         pickup_notes: String(payload.pickupNotes || '').trim(),
         facility_name: String(payload.facilityName || '').trim(),
         destination_address: String(payload.destinationAddress || '').trim(),
+        destination_city: String(payload.destinationCity || '').trim(),
+        destination_zip: String(payload.destinationZip || '').trim(),
         department_suite: String(payload.destinationNotes || payload.departmentSuite || '').trim(),
+        additional_stops: String(payload.additionalStops || '').trim(),
+        flight_info: String(payload.flightInfo || '').trim(),
         mobility_requirement: String(payload.mobilityNeed || 'ambulatory'),
+        boarding_assistance: Boolean(payload.needsBoardingAssistance),
         special_instructions: String(payload.specialInstructions || '').trim()
       }
     });
-    const sub = (res && res.submission) || res;
+    const sub = /** @type {Record<string, any>} */ ((res && res.submission) || res || {});
     return {
-      submitted: Boolean(sub && sub._id),
-      submissionId: (sub && sub._id) || '',
+      submitted: Boolean(sub._id),
+      submissionId: String(sub._id || ''),
       reason: ''
     };
   } catch (err) {
@@ -98,10 +107,10 @@ export async function submitContactToWixForms(record) {
         message: String(record.message || '')
       }
     });
-    const sub = (res && res.submission) || res;
+    const sub = /** @type {Record<string, any>} */ ((res && res.submission) || res || {});
     return {
-      submitted: Boolean(sub && sub._id),
-      submissionId: (sub && sub._id) || '',
+      submitted: Boolean(sub._id),
+      submissionId: String(sub._id || ''),
       reason: ''
     };
   } catch (err) {

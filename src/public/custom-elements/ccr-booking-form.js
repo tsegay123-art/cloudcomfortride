@@ -43,8 +43,12 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         destinationNotes: '',
         firstName: '',
         lastName: '',
+        countryCode: '+1',
         phone: '',
         email: '',
+        passengerCount: 1,
+        additionalStops: '',
+        flightInfo: '',
         mobilityNeed: 'ambulatory',
         hasCompanion: false,
         companionCount: 1,
@@ -156,8 +160,12 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
         destinationNotes: val('destinationNotes'),
         firstName: val('firstName'),
         lastName: val('lastName'),
+        countryCode: val('countryCode') || '+1',
         phone: val('phone'),
         email: val('email'),
+        passengerCount: Number(val('passengerCount') || 1),
+        additionalStops: val('additionalStops'),
+        flightInfo: val('flightInfo'),
         mobilityNeed: val('mobilityNeed') || 'ambulatory',
         hasCompanion: checked('hasCompanion'),
         companionCount: Number(val('companionCount') || 1),
@@ -611,11 +619,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             </div>
           </div>
 
-          <div class="grid-3" style="margin-top:14px;">
-            <div>
-              <label for="facilityName">Medical Facility / Clinic Name</label>
-              <input type="text" id="facilityName" placeholder="e.g., Swedish First Hill, UW Medical" value="${s.facilityName}" />
-            </div>
+          <div class="grid-2" style="margin-top:16px;">
             <div class="ac-wrap">
               <label for="destinationAddress">Destination Address *</label>
               <input type="text" id="destinationAddress" autocomplete="off" placeholder="Clinic street address" value="${s.destinationAddress}" />
@@ -631,7 +635,11 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               <input type="text" id="destinationNotes" placeholder="e.g., Dialysis Unit, 3rd Floor" value="${s.destinationNotes}" />
             </div>
           </div>
-          <div class="grid-2" style="margin-top:12px;">
+          <div class="grid-3" style="margin-top:12px;">
+            <div>
+              <label for="facilityName">Medical Facility / Clinic Name</label>
+              <input type="text" id="facilityName" placeholder="e.g., Swedish First Hill, UW Medical" value="${s.facilityName}" />
+            </div>
             <div>
               <label for="destinationCity">Destination City</label>
               <input type="text" id="destinationCity" placeholder="Seattle" value="${s.destinationCity}" />
@@ -639,6 +647,16 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             <div>
               <label for="destinationZip">Destination ZIP Code</label>
               <input type="text" id="destinationZip" placeholder="98104" value="${s.destinationZip}" maxlength="10" />
+            </div>
+          </div>
+          <div class="grid-2" style="margin-top:12px;">
+            <div>
+              <label for="additionalStops">Additional Stops (Optional)</label>
+              <input type="text" id="additionalStops" placeholder="e.g., Pharmacy stop before returning home" value="${s.additionalStops}" />
+            </div>
+            <div>
+              <label for="flightInfo">Flight Number / Airline (Airport Rides)</label>
+              <input type="text" id="flightInfo" placeholder="e.g., Delta DL 412 (Sea-Tac)" value="${s.flightInfo}" />
             </div>
           </div>
           <div class="quick-facilities">
@@ -670,7 +688,15 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             </div>
           </div>
 
-          <div class="grid-2" style="margin-top:14px;">
+          <div class="grid-3" style="margin-top:14px;">
+            <div>
+              <label for="countryCode">Country Code</label>
+              <select id="countryCode">
+                <option value="+1" ${s.countryCode === '+1' ? 'selected' : ''}>US (+1)</option>
+                <option value="+1-CA" ${s.countryCode === '+1-CA' ? 'selected' : ''}>Canada (+1)</option>
+                <option value="other" ${s.countryCode === 'other' ? 'selected' : ''}>Other</option>
+              </select>
+            </div>
             <div>
               <label for="phone">Contact Telephone *</label>
               <input type="tel" id="phone" placeholder="(206) 555-0199" value="${s.phone}" />
@@ -680,6 +706,12 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
               <label for="email">Email Address *</label>
               <input type="email" id="email" placeholder="patient@example.com" value="${s.email}" />
               ${fieldErr('email')}
+            </div>
+          </div>
+          <div class="grid-2" style="margin-top:14px;">
+            <div>
+              <label for="passengerCount">Number of Passengers</label>
+              <input type="number" id="passengerCount" min="1" max="6" value="${s.passengerCount}" />
             </div>
           </div>
 
