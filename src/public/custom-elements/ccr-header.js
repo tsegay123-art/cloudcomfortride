@@ -137,29 +137,33 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           }
           .strip-inner {
             display: flex;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
-            gap: 8px;
+            gap: 4px 10px;
           }
           .strip-left {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
-            gap: 10px;
+            gap: 6px 10px;
+            font-size: 12px;
             font-weight: 700;
             color: var(--ink);
-            white-space: nowrap;
+          }
+          @media (min-width: 640px) {
+            .strip-left { font-size: 14px; gap: 10px; }
           }
           .strip-left a {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             white-space: nowrap;
           }
           .strip-left a:hover { color: #123e77; }
           :host([data-theme="dark"]) .strip-left a:hover { color: #f3bf28; }
           .strip-right {
-            display: flex;
+            display: none;
             align-items: center;
             gap: 6px;
             font-size: 12px;
@@ -169,7 +173,7 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
             color: var(--muted);
             white-space: nowrap;
           }
-          @media (min-width: 640px) { .strip-right { font-size: 13px; } }
+          @media (min-width: 640px) { .strip-right { display: flex; font-size: 13px; } }
           .nav-bar {
             display: flex;
             align-items: center;
@@ -201,11 +205,10 @@ if (typeof HTMLElement !== 'undefined' && typeof customElements !== 'undefined')
           .brand-title {
             font-family: 'Manrope', sans-serif;
             font-weight: 900;
-            font-size: clamp(16px, 4.3vw, 22px);
+            font-size: clamp(14px, 3.8vw, 22px);
             color: #061f46;
-            line-height: 1.1;
+            line-height: 1.08;
             display: block;
-            white-space: nowrap;
           }
           :host([data-theme="dark"]) .brand-title { color: #ffffff; }
           .brand-sub {
