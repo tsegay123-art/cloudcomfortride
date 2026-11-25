@@ -5,4 +5,9 @@ $w.onReady(function () {
   wireHomeSeo('#ccrHome');
   wireNavigationElement('#ccrHome');
   wireBookingElement('#ccrHome');
+  try {
+    $w('#section10').collapse();
+  } catch (e) {
+    // Ignore if already collapsed or removed
+  }
 });

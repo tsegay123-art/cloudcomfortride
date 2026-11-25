@@ -29,11 +29,12 @@ const ROUTE_ALIASES = {
   '/why-cloud-comfort-ride': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
   '/fleet': { urls: ['/fleet', '/why-cloud-comfort-ride', '/safety-drivers'], names: ['fleet', 'why cloud comfort ride', 'why cloud medical'] },
   '/why-cloud-medical': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
-  '/book-a-ride': { urls: ['/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
-  '/book-online': { urls: ['/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
-  '/booking-calendar': { urls: ['/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
-  '/booking-form': { urls: ['/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
-  '/service-page': { urls: ['/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
+  '/book-a-ride': { urls: ['/booking-page', '/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['booking page', 'book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
+  '/booking-page': { urls: ['/booking-page', '/book-a-ride', '/book-ride'], names: ['booking page', 'book a ride', 'book ride'] },
+  '/book-online': { urls: ['/booking-page', '/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['booking page', 'book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
+  '/booking-calendar': { urls: ['/booking-page', '/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['booking page', 'book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
+  '/booking-form': { urls: ['/booking-page', '/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['booking page', 'book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
+  '/service-page': { urls: ['/booking-page', '/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['booking page', 'book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
   '/my-bookings': { urls: ['/my-booking'], names: ['my booking'] },
   '/my-booking': { urls: ['/my-booking'], names: ['my booking'] },
   '/contact': { urls: ['/contact', '/contact-us'], names: ['contact'] },
@@ -66,23 +67,35 @@ export function resolveWixRoute(requestedPath) {
     }
 
     const SYSTEM_BOOKING_URLS = ['/book-online', '/booking-form', '/booking-calendar', '/service-page'];
-    const isBookingTarget = ['/book-a-ride', '/book-online', '/booking-calendar', '/booking-form', '/service-page'].includes(clean);
+    const SYSTEM_MEMBER_BOOKING_URLS = ['/my-bookings', '/account/my-bookings'];
+    const isBookingTarget = ['/book-a-ride', '/booking-page', '/book-online', '/booking-calendar', '/booking-form', '/service-page'].includes(clean);
+    const isMyBookingsTarget = clean === '/my-bookings' || clean === '/my-booking';
 
-    const exact = pages.find((p) => normUrl(p.url) === clean && !(isBookingTarget && SYSTEM_BOOKING_URLS.includes(normUrl(p.url))));
-    if (exact && exact.url) return normUrl(exact.url);
+    const isAllowedPage = (p) => {
+      const u = normUrl(p.url);
+      if (isBookingTarget && SYSTEM_BOOKING_URLS.includes(u)) return false;
+      if (isMyBookingsTarget && SYSTEM_MEMBER_BOOKING_URLS.includes(u)) return false;
+      return true;
+    };
+
+    if (!isMyBookingsTarget) {
+      const exact = pages.find((p) => normUrl(p.url) === clean && isAllowedPage(p));
+      if (exact && exact.url) return normUrl(exact.url);
+    }
 
     const rule = ROUTE_ALIASES[clean];
     if (rule) {
       for (const candidateUrl of rule.urls) {
-        const byAliasUrl = pages.find((p) => normUrl(p.url) === candidateUrl && !(isBookingTarget && SYSTEM_BOOKING_URLS.includes(normUrl(p.url))));
+        const byAliasUrl = pages.find((p) => normUrl(p.url) === candidateUrl && isAllowedPage(p));
         if (byAliasUrl && byAliasUrl.url) return normUrl(byAliasUrl.url);
       }
 
       for (const candidateName of rule.names) {
         const byName = pages.find((p) => {
-          const u = normUrl(p.url);
-          if (isBookingTarget && SYSTEM_BOOKING_URLS.includes(u)) return false;
-          return String(p.name || '').toLowerCase().includes(candidateName);
+          if (!isAllowedPage(p)) return false;
+          const pname = String(p.name || '').toLowerCase().trim();
+          if (isMyBookingsTarget) return pname === 'my booking';
+          return pname.includes(candidateName);
         });
         if (byName && byName.url) return normUrl(byName.url);
       }
@@ -92,7 +105,7 @@ export function resolveWixRoute(requestedPath) {
       return '/my-booking';
     }
     if (isBookingTarget) {
-      return '/book-a-ride';
+      return '/booking-page';
     }
   } catch (e) {
     // Fallback to requested path if site structure is unavailable
