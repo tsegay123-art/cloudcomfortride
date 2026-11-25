@@ -29,12 +29,13 @@ const ROUTE_ALIASES = {
   '/why-cloud-comfort-ride': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
   '/fleet': { urls: ['/fleet', '/why-cloud-comfort-ride', '/safety-drivers'], names: ['fleet', 'why cloud comfort ride', 'why cloud medical'] },
   '/why-cloud-medical': { urls: ['/why-cloud-comfort-ride', '/safety-drivers', '/why-cloud-medical'], names: ['why cloud comfort ride', 'why cloud medical', 'safety'] },
-  '/book-a-ride': { urls: ['/booking-page', '/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['booking page', 'book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
-  '/booking-page': { urls: ['/booking-page', '/book-a-ride', '/book-ride'], names: ['booking page', 'book a ride', 'book ride'] },
-  '/book-online': { urls: ['/booking-page', '/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['booking page', 'book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
-  '/booking-calendar': { urls: ['/booking-page', '/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['booking page', 'book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
-  '/booking-form': { urls: ['/booking-page', '/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['booking page', 'book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
-  '/service-page': { urls: ['/booking-page', '/book-a-ride', '/book-ride', '/schedule-ride', '/schedule-a-ride'], names: ['booking page', 'book a ride', 'book ride', 'schedule ride', 'schedule a ride'] },
+  '/book-a-ride': { urls: ['/booking', '/booking-page', '/book-a-ride', '/book-ride'], names: ['booking form', 'booking page', 'book a ride', 'book ride'] },
+  '/booking': { urls: ['/booking', '/booking-form', '/booking-page'], names: ['booking form', 'booking page', 'book a ride'] },
+  '/booking-page': { urls: ['/booking', '/booking-page', '/book-a-ride'], names: ['booking form', 'booking page', 'book a ride'] },
+  '/book-online': { urls: ['/booking', '/booking-page', '/book-a-ride'], names: ['booking form', 'booking page', 'book a ride'] },
+  '/booking-calendar': { urls: ['/booking', '/booking-page', '/book-a-ride'], names: ['booking form', 'booking page', 'book a ride'] },
+  '/booking-form': { urls: ['/booking', '/booking-page', '/book-a-ride'], names: ['booking form', 'booking page', 'book a ride'] },
+  '/service-page': { urls: ['/booking', '/booking-page', '/book-a-ride'], names: ['booking form', 'booking page', 'book a ride'] },
   '/my-bookings': { urls: ['/my-booking'], names: ['my booking'] },
   '/my-booking': { urls: ['/my-booking'], names: ['my booking'] },
   '/contact': { urls: ['/contact', '/contact-us'], names: ['contact'] },
@@ -66,9 +67,9 @@ export function resolveWixRoute(requestedPath) {
       return home && home.url ? normUrl(home.url) : '/';
     }
 
-    const SYSTEM_BOOKING_URLS = ['/book-online', '/booking-form', '/booking-calendar', '/service-page'];
+    const SYSTEM_BOOKING_URLS = ['/book-online', '/booking-calendar', '/service-page', '/booking-form'];
     const SYSTEM_MEMBER_BOOKING_URLS = ['/my-bookings', '/account/my-bookings'];
-    const isBookingTarget = ['/book-a-ride', '/booking-page', '/book-online', '/booking-calendar', '/booking-form', '/service-page'].includes(clean);
+    const isBookingTarget = ['/booking', '/book-a-ride', '/booking-page', '/book-online', '/booking-calendar', '/booking-form', '/service-page'].includes(clean);
     const isMyBookingsTarget = clean === '/my-bookings' || clean === '/my-booking';
 
     const isAllowedPage = (p) => {
@@ -95,7 +96,7 @@ export function resolveWixRoute(requestedPath) {
           if (!isAllowedPage(p)) return false;
           const pname = String(p.name || '').toLowerCase().trim();
           if (isMyBookingsTarget) return pname === 'my booking';
-          return pname.includes(candidateName);
+          return pname === candidateName || pname.includes(candidateName);
         });
         if (byName && byName.url) return normUrl(byName.url);
       }
@@ -105,7 +106,7 @@ export function resolveWixRoute(requestedPath) {
       return '/my-booking';
     }
     if (isBookingTarget) {
-      return '/booking-page';
+      return '/booking';
     }
   } catch (e) {
     // Fallback to requested path if site structure is unavailable
